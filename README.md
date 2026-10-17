@@ -30,7 +30,9 @@ The shortest reliable path, in the order you will present it.
 4. **Wow moment 2 – Cloud**: open `docs/architecture-student.svg` and, if you
    deployed, the Google Cloud console pages listed under *GCP resources to show*.
 5. **Wow moment 3 – AI**: let students click a suggested question or type one,
-   then click **🔊 Read Aloud**. **⏹ Stop** is always visible while audio plays.
+   then click **🔊 Read Aloud** (next to the text box) to hear the latest answer. The
+   button turns into **⏹ Stop** while audio plays. Flip **Auto voice** (top right)
+   to on if you want every new answer read aloud automatically.
 6. **Challenge question** (shows grounding): *"Who won the 7th grade spelling bee
    last year?"* The bot answers that it couldn't find that on the school website.
 
@@ -169,8 +171,10 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
 
 ## Voice features
 
-* **🔊 Read Aloud** appears under every answer. Nothing plays automatically.
-  Click it again, or the red **⏹ Stop audio** button, to stop.
+* **🔊 Read Aloud** sits next to the text box and reads the latest answer. It
+  turns into **⏹ Stop** while audio plays.
+* **Auto voice** (toggle under the model name, top right) reads every new answer
+  aloud automatically. It is off by default and remembered on that browser.
 * If the browser has no voices (rare), the button says so and chat continues.
 * **🎤 Ask** fills the text box with what it heard so it can be fixed before
   sending. Use Chrome or Edge; allow the microphone once when asked.

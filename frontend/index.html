@@ -16,7 +16,14 @@
       <h1>Willkie Badger AI</h1>
       <p>Ed Willkie Middle School &middot; Career Day AI Demo</p>
     </div>
-    <div class="status" id="status" aria-live="polite">Connecting&hellip;</div>
+    <div class="status-group">
+      <div class="status" id="status" aria-live="polite">Connecting&hellip;</div>
+      <label class="toggle" for="auto-voice" title="Read every new answer aloud automatically">
+        <input type="checkbox" id="auto-voice">
+        <span class="switch" aria-hidden="true"></span>
+        <span>🔊 Auto voice: <strong id="auto-voice-state">off</strong></span>
+      </label>
+    </div>
   </header>
 
   <p class="notice">
@@ -41,12 +48,12 @@
 
   <form class="composer" id="composer" autocomplete="off">
     <button type="button" class="mic" id="mic" title="Ask a question with your voice" aria-label="Ask a question with your voice" hidden>🎤 Ask</button>
+    <button type="button" class="speak" id="read-aloud" title="Read the latest answer aloud">🔊 Read Aloud</button>
     <input type="text" id="question" placeholder="Type your question here…" maxlength="500" aria-label="Your question" required>
     <button type="submit" class="send" id="send">Send ➤</button>
   </form>
 
   <footer class="foot">
-    <button type="button" class="stop" id="stop-all" hidden>⏹ Stop audio</button>
     <span>School facts come from the public website ewms.emsisd.com. No audio or questions are saved.</span>
   </footer>
 

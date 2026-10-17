@@ -11,13 +11,16 @@
   const input = document.getElementById("question");
   const sendBtn = document.getElementById("send");
   const micBtn = document.getElementById("mic");
-  const stopAllBtn = document.getElementById("stop-all");
+  const readBtn = document.getElementById("read-aloud");
+  const autoVoice = document.getElementById("auto-voice");
+  const autoVoiceState = document.getElementById("auto-voice-state");
   const statusEl = document.getElementById("status");
 
   let sessionId = null;          // kept in memory only; nothing is stored
   let cloudTts = false;          // set from /api/health
   let currentAudio = null;       // playing <audio> element (Cloud TTS)
-  let currentSpeakBtn = null;    // the Read Aloud button that is active
+  let lastReply = chat.querySelector(".bubble.bot .text").textContent; // greeting
+  const AUTO_VOICE_KEY = "badger-auto-voice";   // presenter preference only
 
   // ---------- helpers ----------
   function addBubble(text, who, extraClass) {
@@ -32,24 +35,6 @@
     return bubble;
   }
 
-  function addReadAloud(bubble, text) {
-    const actions = document.createElement("div");
-    actions.className = "actions";
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "speak";
-    btn.textContent = "🔊 Read Aloud";
-    btn.addEventListener("click", function () {
-      if (btn.classList.contains("playing")) {
-        stopAudio();
-      } else {
-        speak(text, btn);
-      }
-    });
-    actions.appendChild(btn);
-    bubble.appendChild(actions);
-  }
-
   function setBusy(busy) {
     sendBtn.disabled = busy;
     input.disabled = busy;
@@ -60,6 +45,7 @@
   async function ask(question) {
     const q = (question || "").trim();
     if (!q) return;
+    stopAudio();
     addBubble(q, "student");
     input.value = "";
     setBusy(true);
@@ -77,8 +63,9 @@
         return;
       }
       sessionId = data.session_id;
-      const bubble = addBubble(data.reply, "bot");
-      addReadAloud(bubble, data.reply);
+      addBubble(data.reply, "bot");
+      lastReply = data.reply;
+      if (autoVoice.checked) speak(lastReply);   // Auto voice is opt-in
     } catch (err) {
       typing.remove();
       addBubble("I can't reach the server right now. Is the app still running?", "bot", "error");
@@ -97,20 +84,16 @@
   });
 
   // ---------- Read Aloud (text-to-speech) ----------
-  function markPlaying(btn) {
-    currentSpeakBtn = btn;
-    btn.classList.add("playing");
-    btn.textContent = "⏹ Stop";
-    stopAllBtn.hidden = false;
+  // One button next to the input reads the latest answer; it turns into Stop
+  // while audio is playing. The Auto voice toggle plays each new answer.
+  function markPlaying() {
+    readBtn.classList.add("playing");
+    readBtn.textContent = "⏹ Stop";
   }
 
   function markStopped() {
-    if (currentSpeakBtn) {
-      currentSpeakBtn.classList.remove("playing");
-      currentSpeakBtn.textContent = "🔊 Read Aloud";
-      currentSpeakBtn = null;
-    }
-    stopAllBtn.hidden = true;
+    readBtn.classList.remove("playing");
+    readBtn.textContent = "🔊 Read Aloud";
   }
 
   function stopAudio() {
@@ -122,10 +105,12 @@
     markStopped();
   }
 
-  function speakWithBrowser(text, btn) {
+  function speakWithBrowser(text) {
     if (!("speechSynthesis" in window)) {
-      btn.textContent = "Read Aloud not available here";
-      btn.disabled = true;
+      readBtn.textContent = "Voice not available";
+      readBtn.disabled = true;
+      autoVoice.checked = false;
+      autoVoice.disabled = true;
       return;
     }
     const utter = new SpeechSynthesisUtterance(text);
@@ -138,12 +123,13 @@
     utter.onend = markStopped;
     utter.onerror = markStopped;
     window.speechSynthesis.cancel();
-    markPlaying(btn);
+    markPlaying();
     window.speechSynthesis.speak(utter);
   }
 
-  async function speak(text, btn) {
+  async function speak(text) {
     stopAudio();
+    if (!text) return;
     if (cloudTts) {
       // Try Google Cloud Text-to-Speech first; fall back to the browser voice.
       try {
@@ -158,7 +144,7 @@
           currentAudio = audio;
           audio.onended = markStopped;
           audio.onerror = markStopped;
-          markPlaying(btn);
+          markPlaying();
           await audio.play();
           return;
         }
@@ -166,10 +152,27 @@
         // ignore and fall back
       }
     }
-    speakWithBrowser(text, btn);
+    speakWithBrowser(text);
   }
 
-  stopAllBtn.addEventListener("click", stopAudio);
+  readBtn.addEventListener("click", function () {
+    if (readBtn.classList.contains("playing")) {
+      stopAudio();
+    } else {
+      speak(lastReply);
+    }
+  });
+
+  function updateAutoVoiceLabel() {
+    autoVoiceState.textContent = autoVoice.checked ? "on" : "off";
+  }
+  autoVoice.addEventListener("change", function () {
+    updateAutoVoiceLabel();
+    if (!autoVoice.checked) stopAudio();
+    try { localStorage.setItem(AUTO_VOICE_KEY, autoVoice.checked ? "1" : "0"); } catch (e) { /* ignore */ }
+  });
+  try { autoVoice.checked = localStorage.getItem(AUTO_VOICE_KEY) === "1"; } catch (e) { /* ignore */ }
+  updateAutoVoiceLabel();
   if (window.speechSynthesis) window.speechSynthesis.getVoices(); // warm up voice list
 
   // ---------- Microphone (speech-to-text), optional ----------
@@ -183,6 +186,7 @@
         return;
       }
       try {
+        stopAudio();
         recognizer = new Recognition();
         recognizer.lang = "en-US";
         recognizer.interimResults = false;

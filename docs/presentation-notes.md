@@ -18,12 +18,12 @@ These are talking aids. They are **not** part of the chatbot's answers.
 
 1. **CODE** – open `app/agent.py`, lines 21–43 ("This connects our chatbot to school information") and lines 46–56 ("This tells our AI how to behave"). Scroll slowly. Point out the rules are written in English.
 2. **CLOUD** – open `docs/architecture-student.svg` (or the Google Cloud console pages listed in the README). One sentence per box.
-3. **AI INTERACTION** – hand the keyboard to a student. Click **🔊 Read Aloud** on the answer.
+3. **AI INTERACTION** – hand the keyboard to a student. Click **🔊 Read Aloud** next to the text box, or switch **Auto voice** on (top right) so every answer is spoken.
 
 ## Suggested script (≈6 minutes)
 
 1. "Who has used a chatbot before?" Show the page. Click **What is our mascot?**
-2. Click **🔊 Read Aloud**. Let it finish. Click **⏹ Stop** to show you're in control.
+2. Click **🔊 Read Aloud**. Let it finish. Click it again (**⏹ Stop**) to show you're in control. Then flip **Auto voice** on for the rest of the demo.
 3. Switch to the code. "You don't need to understand this. Notice it's just instructions."
 4. Switch to the diagram. "My job is deciding how these boxes connect, and keeping it safe and affordable."
 5. Students ask questions. Keep the **challenge question** ready:

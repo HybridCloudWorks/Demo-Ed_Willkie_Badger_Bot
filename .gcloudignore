@@ -1,0 +1,8 @@
+# Files that `agents-cli deploy` / `gcloud run deploy --source .` must not upload.
+#!include:.gitignore
+.git
+.gitignore
+.gcloudignore
+docs/
+tests/
+scripts/

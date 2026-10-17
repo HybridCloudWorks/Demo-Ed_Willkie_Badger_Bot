@@ -1,0 +1,177 @@
+/* Willkie Badger AI - projection-friendly chat styling.
+   School colors: change the four values below to match approved branding. */
+:root {
+  --school-primary: #b3122b;   /* badger red */
+  --school-dark: #1b1b1f;      /* near black */
+  --school-light: #fff6f7;     /* soft tint for student bubbles */
+  --accent: #ffb703;           /* gold highlight */
+  --bg: #f4f4f6;
+  --text: #16161a;
+  --bot-bubble: #ffffff;
+  --radius: 18px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 28px;
+  background: linear-gradient(90deg, var(--school-dark), var(--school-primary));
+  color: #fff;
+}
+.logo {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--school-dark);
+  display: grid; place-items: center;
+  font-size: 44px;
+  border: 4px solid var(--accent);
+  flex-shrink: 0;
+}
+.titles h1 { margin: 0; font-size: 2rem; letter-spacing: 0.5px; }
+.titles p { margin: 2px 0 0; opacity: 0.9; font-size: 1rem; }
+.status {
+  margin-left: auto;
+  font-size: 0.85rem;
+  background: rgba(255,255,255,0.15);
+  padding: 8px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 28px;
+  background: #fff3cd;
+  color: #5a4300;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #f0d67a;
+}
+
+/* Conversation */
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bubble {
+  max-width: 78%;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  white-space: pre-wrap;
+}
+.bubble.bot {
+  align-self: flex-start;
+  background: var(--bot-bubble);
+  border-left: 8px solid var(--school-primary);
+}
+.bubble.student {
+  align-self: flex-end;
+  background: var(--school-light);
+  border-right: 8px solid var(--accent);
+}
+.bubble.error { border-left-color: #b00020; background: #fdecee; }
+.bubble.typing { opacity: 0.7; font-style: italic; }
+.bubble .actions { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  transition: transform 0.05s ease, filter 0.1s ease;
+}
+button:active { transform: scale(0.97); }
+button:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.speak {
+  background: var(--school-dark);
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+}
+.speak.playing { background: var(--school-primary); }
+
+/* Suggested questions */
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 28px;
+}
+.chip {
+  background: #fff;
+  color: var(--school-dark);
+  border: 3px solid var(--school-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.chip:hover { background: var(--school-light); }
+
+/* Input row */
+.composer {
+  display: flex;
+  gap: 12px;
+  padding: 14px 28px 18px;
+  background: #fff;
+  border-top: 2px solid #e2e2e6;
+}
+.composer input {
+  flex: 1;
+  font: inherit;
+  font-size: 1.15rem;
+  padding: 16px 20px;
+  border: 3px solid #c9c9d0;
+  border-radius: 14px;
+}
+.composer input:focus { outline: none; border-color: var(--school-primary); }
+.send { background: var(--school-primary); color: #fff; font-weight: 700; font-size: 1.1rem; }
+.mic { background: var(--school-dark); color: #fff; font-size: 1.05rem; }
+.mic.listening { background: #d62828; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { filter: brightness(1.3); } }
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 28px 14px;
+  background: #fff;
+  font-size: 0.75rem;
+  color: #555;
+}
+.stop { background: #b00020; color: #fff; font-size: 0.85rem; padding: 8px 16px; }
+
+/* Phones and tablets */
+@media (max-width: 720px) {
+  body { font-size: 18px; }
+  .topbar { padding: 12px 16px; gap: 12px; }
+  .logo { width: 54px; height: 54px; font-size: 32px; }
+  .titles h1 { font-size: 1.4rem; }
+  .status { display: none; }
+  .chat, .suggestions, .composer, .notice, .foot { padding-left: 16px; padding-right: 16px; }
+  .bubble { max-width: 92%; }
+  .composer { flex-wrap: wrap; }
+  .composer input { min-width: 100%; order: -1; }
+}

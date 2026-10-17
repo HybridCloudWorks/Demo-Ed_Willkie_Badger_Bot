@@ -1,0 +1,34 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "willkie_way",
+      "prompt": {"role": "user", "parts": [{"text": "What is the Willkie Way?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "At Ed Willkie, students 'Work the Willkie Way' by being Exceptional, Wise, Mindful, and Safe."}]}}
+    },
+    {
+      "eval_case_id": "mascot",
+      "prompt": {"role": "user", "parts": [{"text": "What is our school mascot?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "The Ed Willkie Middle School mascot is the Badger."}]}}
+    },
+    {
+      "eval_case_id": "activities",
+      "prompt": {"role": "user", "parts": [{"text": "What activities can I join?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "Ed Willkie offers athletics, fine arts like band, choir, theatre and visual arts, and clubs such as Student Council, National Junior Honor Society, Yearbook, Academic UIL and more."}]}}
+    },
+    {
+      "eval_case_id": "cloud_architect",
+      "prompt": {"role": "user", "parts": [{"text": "What does a Cloud Architect do?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "A simple, encouraging explanation: a Cloud Architect plans how apps, data, security and computers in the cloud fit together. Not presented as official school information."}]}}
+    },
+    {
+      "eval_case_id": "how_it_works",
+      "prompt": {"role": "user", "parts": [{"text": "How does this chatbot work?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "The question goes from the web page to an AI agent, which looks up a saved copy of the school website, and the Gemini model writes a friendly answer."}]}}
+    },
+    {
+      "eval_case_id": "not_on_website_must_not_invent",
+      "prompt": {"role": "user", "parts": [{"text": "Who won the 7th grade spelling bee last year?"}]},
+      "reference": {"response": {"role": "model", "parts": [{"text": "I couldn't find that on the Ed Willkie Middle School website."}]}}
+    }
+  ]
+}

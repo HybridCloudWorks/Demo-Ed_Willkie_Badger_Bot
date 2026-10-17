@@ -1,1 +1,202 @@
-# Demo-Ed_Willkie_Badger_Bot
+# Willkie Badger AI 🦡
+
+A small, demo-ready AI chatbot for **Ed Willkie Middle School**, built for a
+Career Day presentation about being a **Cloud Architect**.
+
+It is built with Google's [Agent Development Kit (ADK)](https://google.github.io/adk-docs/)
+and the [Agents CLI](https://google.github.io/agents-cli/), runs on a laptop or
+on **Google Cloud Run**, answers from a **saved copy of the public school
+website** (so it never invents school facts), and can **read answers aloud**.
+
+> This is an AI demonstration for students in grades 6–8. It collects no names,
+> accounts, chat history, or audio.
+
+```
+Student  →  Chat page  →  ADK agent  →  Gemini  →  Grounded EWMS information
+                                 ↘ Google Cloud (Cloud Run, Vertex AI, Text-to-Speech)
+```
+
+---
+
+## Career Day Demo
+
+The shortest reliable path, in the order you will present it.
+
+1. **Before the day** (once): follow *60-Second Demo Setup* below, then run
+   `python scripts/career_day_check.py` and keep the printed answers as a backup.
+2. **On the day**: open a terminal in this folder and run `make dev`
+   (or the `uvicorn` command below). Open **http://localhost:8000**.
+3. **Wow moment 1 – Code**: open `app/agent.py` in your editor (details below).
+4. **Wow moment 2 – Cloud**: open `docs/architecture-student.svg` and, if you
+   deployed, the Google Cloud console pages listed under *GCP resources to show*.
+5. **Wow moment 3 – AI**: let students click a suggested question or type one,
+   then click **🔊 Read Aloud**. **⏹ Stop** is always visible while audio plays.
+6. **Challenge question** (shows grounding): *"Who won the 7th grade spelling bee
+   last year?"* The bot answers that it couldn't find that on the school website.
+
+Presenter talking points and the backup plan are in `docs/presentation-notes.md`.
+
+## 60-Second Demo Setup
+
+Requires Python 3.11–3.13 and a free Gemini API key from
+<https://aistudio.google.com/apikey>.
+
+```bash
+# 1. Install dependencies
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+
+# 2. Configure the key (never commit .env)
+cp .env.example .env
+#    edit .env and set:  GEMINI_API_KEY=your-key
+
+# 3. Start the application
+uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
+
+# 4. Open the chatbot
+#    http://localhost:8000
+```
+
+Optional one-liners: `make install`, `make dev`, `make test`, `make check`.
+
+Prefer Google Cloud instead of an API key? In `.env` use the Vertex AI block
+(`GOOGLE_GENAI_USE_VERTEXAI=TRUE`, your project ID, `us-central1`) after
+`gcloud auth application-default login`. Everything else stays the same.
+
+---
+
+## SHOW THIS FILE DURING THE PRESENTATION: `app/agent.py`
+
+Open `app/agent.py` and scroll slowly through **lines 21–56**:
+
+| Lines | What students see | What to say |
+|---|---|---|
+| 21–43 | `# This connects our chatbot to school information.` and the `look_up_school_info` function | "This is how the AI opens the library. It can only use what it finds there." |
+| 46–56 | `# This tells our AI how to behave.` and the start of `INSTRUCTION` | "The rules are written in English. The AI reads them before every answer." |
+| 109–121 | `root_agent = Agent(...)` | "This line plugs the brain, the rules, and the library together." |
+
+The whole file is about 120 lines, and most of it is plain English.
+
+Bonus for curious students: open **http://localhost:8000/dev-ui/** (Google's
+built-in developer view). Ask a question there and the tool call to the
+school "library" is shown step by step.
+
+---
+
+## Architecture
+
+### Student version
+
+![How Willkie Badger AI works](docs/architecture-student.svg)
+
+Use it with these analogies: **code = instructions**, **AI model = the brain**,
+**school website = the library**, **API = a messenger**, **Cloud Run = where the
+app lives**, **Cloud Architect = the person who fits the pieces together**.
+
+### Technical version
+
+See `docs/architecture.md` for the accurate request flow, the grounding design,
+and the Google Cloud deployment diagram. In short:
+
+* `frontend/` (static HTML/JS) → `POST /api/chat` on a FastAPI server built by
+  ADK's `get_fast_api_app` → `Runner` → `Agent` (`gemini-3.8-flash`).
+* The agent's only tool, `look_up_school_info`, does a keyword search over
+  `app/school_knowledge.json` (26 public pages cached from ewms.emsisd.com).
+* Sessions are in-memory. No database, no auth, no analytics.
+* Read Aloud uses the browser's `speechSynthesis` by default; set
+  `ENABLE_CLOUD_TTS=true` (plus `pip install -e ".[tts]"` and Google Cloud
+  credentials) to use Cloud Text-to-Speech, with automatic fallback.
+* Microphone input uses the browser's `SpeechRecognition` (Chrome/Edge). The
+  button hides itself on browsers that lack it; typing always works.
+
+## Google Cloud
+
+### GCP resources to show
+
+| Resource | Why it exists |
+|---|---|
+| **Cloud Run** service `willkie-badger-ai` | Where the app lives. Scales to zero between demos. |
+| **Vertex AI → Gemini** | The brain. Called through an API by the agent. |
+| **Service account + IAM** (`roles/aiplatform.user`) | The app's ID badge. No API key stored anywhere. |
+| **Artifact Registry / Cloud Build** | Where the container image is built and kept. |
+| **Cloud Logging / Trace** | Shows a real student question flowing through the system. |
+| **Cloud Text-to-Speech API** (optional) | The voice behind Read Aloud. |
+| **Secret Manager** (only if deploying with an API key) | Keeps the key out of code. |
+
+Nothing else is used on purpose. Details, console paths, and the deploy
+diagram: `docs/architecture.md`.
+
+### Deploy to Cloud Run (optional)
+
+```bash
+pip install google-agents-cli
+gcloud auth login && gcloud config set project YOUR_PROJECT_ID
+gcloud services enable run.googleapis.com aiplatform.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+agents-cli deploy --region us-central1 \
+  --env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1
+```
+
+`agents-cli deploy` reads `agents-cli-manifest.yaml` and runs `gcloud run deploy`
+with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
+"look where it can live" moment.
+
+## Voice features
+
+* **🔊 Read Aloud** appears under every answer. Nothing plays automatically.
+  Click it again, or the red **⏹ Stop audio** button, to stop.
+* If the browser has no voices (rare), the button says so and chat continues.
+* **🎤 Ask** fills the text box with what it heard so it can be fixed before
+  sending. Use Chrome or Edge; allow the microphone once when asked.
+
+## Privacy
+
+* No accounts, no student names, no chat history saved, no audio stored.
+* `app/school_knowledge.json` contains only public, institutional information
+  from ewms.emsisd.com (no student information, no staff emails).
+* The logo in the header is a **placeholder** (🦡). Replace it with an
+  authorized asset only if the school approves; see the comment in
+  `frontend/index.html`.
+
+## Tests
+
+```bash
+pytest -q                           # no API key needed (scripted model), ~2 s
+python scripts/career_day_check.py  # live: the six Career Day questions
+agents-cli eval run                 # optional LLM-graded eval (tests/eval)
+```
+
+`pytest` covers: the library finds the Willkie Way, mascot and activities;
+unknown questions return "not found"; the agent is wired to the tool and the
+fallback sentence; the web page, `/api/chat`, and both voice fallbacks work;
+chat still works when the model or Cloud TTS fails.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Answer bubble says "The AI could not answer right now" | Check `.env` (`GEMINI_API_KEY`) and internet access. Restart the server after editing `.env`. |
+| Page shows "Server not reachable" | The `uvicorn` process stopped; start it again. |
+| Read Aloud is silent | Unmute the laptop; try Chrome. Or just read the screen. |
+| Mic button missing | Browser lacks speech recognition (Firefox/Safari). Type instead. |
+| Port 8000 busy | `uvicorn app.fast_api_app:app --port 8080` and open that port. |
+
+## Project layout
+
+```
+app/agent.py                  the agent  <- SHOW THIS FILE
+app/school_knowledge.py       search over the cached school pages
+app/school_knowledge.json     the cached public pages
+app/fast_api_app.py           web server (/, /api/chat, /api/tts, /dev-ui)
+frontend/                     chat page: index.html, style.css, app.js
+tests/                        unit tests (no key) + eval dataset
+scripts/career_day_check.py   live check of the six Career Day questions
+scripts/refresh_school_knowledge.py   optional refresh of the cached pages
+docs/                         diagrams and presenter notes
+Dockerfile, agents-cli-manifest.yaml  Cloud Run deployment
+.env.example                  configuration template (never commit .env)
+```
+
+## License
+
+MIT, see `LICENSE`. Ed Willkie Middle School and EMS ISD names are used for a
+school-authorized demonstration; no official logos or trademarks are included.

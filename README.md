@@ -38,8 +38,9 @@ Presenter talking points and the backup plan are in `docs/presentation-notes.md`
 
 ## 60-Second Demo Setup
 
-Requires Python 3.11–3.13 and a free Gemini API key from
-<https://aistudio.google.com/apikey>.
+Requires Python 3.11–3.13 (not 3.14: the Google ADK does not support it yet) and a
+free Gemini API key from <https://aistudio.google.com/apikey>. Always use a virtual
+environment; it keeps the `agents-cli` and `uvicorn` commands on your PATH.
 
 ```bash
 # 1. Install dependencies
@@ -127,6 +128,32 @@ Nothing else is used on purpose. Details, console paths, and the deploy
 diagram: `docs/architecture.md`.
 
 ### Deploy to Cloud Run (optional)
+
+**Simplest path (works on Windows, macOS, Linux; no Agents CLI needed).**
+`gcloud run deploy --source` builds the `Dockerfile` with Cloud Build and deploys it:
+
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+gcloud services enable run.googleapis.com aiplatform.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud run deploy willkie-badger-ai --source . --region us-central1 --allow-unauthenticated \
+  --set-env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1
+```
+
+Then let the service call Gemini (Cloud Run uses the Compute Engine default service account unless you choose another):
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:$(gcloud projects describe YOUR_PROJECT_ID --format='value(projectNumber)')-compute@developer.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+```
+
+The deploy output prints the service URL; open it to see the same chat page as
+localhost. On Windows PowerShell, replace the trailing `\` line continuations with a
+backtick or put each command on one line.
+
+**Agents CLI path (macOS, Linux, or Windows via WSL 2).** The Agents CLI does not
+officially support native Windows, so use the `gcloud` path above there.
 
 ```bash
 pip install google-agents-cli

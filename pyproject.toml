@@ -1,0 +1,36 @@
+[project]
+name = "willkie-badger-ai"
+version = "0.1.0"
+description = "Career Day demo chatbot for Ed Willkie Middle School, built with Google's Agent Development Kit (ADK)."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    # The AI agent framework (Google ADK) plus its Google Cloud / Vertex AI support.
+    "google-adk[gcp]>=2.9.2,<3.0.0",
+    # The small web server that serves the chat page and the /api/chat endpoint.
+    "fastapi>=0.115.8,<1.0.0",
+    "uvicorn>=0.30.0,<1.0.0",
+    # Reads the .env file so API keys never live in source code.
+    "python-dotenv>=1.0.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+# Optional: Google Cloud Text-to-Speech voice. The browser's built-in voice is
+# used when this is not installed or not enabled, so the demo never depends on it.
+tts = ["google-cloud-texttospeech>=2.16.0,<3.0.0"]
+# Tests you can run without any API key.
+dev = ["pytest>=8.0,<10", "pytest-asyncio>=0.23,<2", "httpx>=0.27,<1"]
+# `agents-cli eval run` (LLM-graded evaluation; needs a Gemini key or ADC).
+eval = ["google-adk[eval]>=2.9.2,<3.0.0", "google-cloud-aiplatform[evaluation]>=1.156.0,<2.0.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests/unit", "tests/integration"]
+asyncio_mode = "auto"

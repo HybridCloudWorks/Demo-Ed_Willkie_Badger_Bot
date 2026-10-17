@@ -1,0 +1,17 @@
+# Configuration for Google's Agents CLI (https://google.github.io/agents-cli/).
+# Lets `agents-cli playground`, `agents-cli eval run` and `agents-cli deploy`
+# find the agent in ./app and deploy it to Cloud Run.
+name: "willkie-badger-ai"
+acli_version: "1.10.0"
+agent_directory: "app"
+region: "us-central1"
+base_template: "adk"
+language: "python"
+framework: "google-adk"
+create_params:
+  root_agent_name: "willkie_badger_ai"
+  deployment_target: "cloud_run"
+  session_type: "in_memory"
+  cicd_runner: "skip"
+  is_a2a: false
+  agent_gateway: false

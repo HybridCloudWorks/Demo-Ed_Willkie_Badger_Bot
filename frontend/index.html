@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Willkie Badger AI</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <!-- LOGO PLACEHOLDER: replace this circle with an authorized school logo
+         (for example <img src="/static/logo.png" alt="Ed Willkie Middle School">).
+         No official school/district trademark is included in this repository. -->
+    <div class="logo" aria-hidden="true" title="Logo placeholder">🦡</div>
+    <div class="titles">
+      <h1>Willkie Badger AI</h1>
+      <p>Ed Willkie Middle School &middot; Career Day AI Demo</p>
+    </div>
+    <div class="status" id="status" aria-live="polite">Connecting&hellip;</div>
+  </header>
+
+  <p class="notice">
+    This is an <strong>AI demonstration</strong>. Answers can be wrong.
+    Please do not type your name or any personal information.
+  </p>
+
+  <main class="chat" id="chat" aria-live="polite" aria-label="Conversation">
+    <div class="bubble bot">
+      <div class="text">Hi! I'm Willkie Badger AI. Ask me about Ed Willkie Middle School, or about jobs in technology like being a Cloud Architect. Pick a question below or type your own.</div>
+    </div>
+  </main>
+
+  <section class="suggestions" id="suggestions" aria-label="Suggested questions">
+    <button type="button" class="chip">What is the Willkie Way?</button>
+    <button type="button" class="chip">What is our mascot?</button>
+    <button type="button" class="chip">What activities can I join?</button>
+    <button type="button" class="chip">What does a Cloud Architect do?</button>
+    <button type="button" class="chip">What is AI?</button>
+    <button type="button" class="chip">How does this chatbot work?</button>
+  </section>
+
+  <form class="composer" id="composer" autocomplete="off">
+    <button type="button" class="mic" id="mic" title="Ask a question with your voice" aria-label="Ask a question with your voice" hidden>🎤 Ask</button>
+    <input type="text" id="question" placeholder="Type your question here…" maxlength="500" aria-label="Your question" required>
+    <button type="submit" class="send" id="send">Send ➤</button>
+  </form>
+
+  <footer class="foot">
+    <button type="button" class="stop" id="stop-all" hidden>⏹ Stop audio</button>
+    <span>School facts come from the public website ewms.emsisd.com. No audio or questions are saved.</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

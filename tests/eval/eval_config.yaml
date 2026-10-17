@@ -1,0 +1,7 @@
+# Used by `agents-cli eval run` (LLM-as-judge). Needs GEMINI_API_KEY or ADC.
+metrics_to_run:
+  - custom_response_quality
+
+custom_metrics:
+  - name: custom_response_quality
+    custom_function_file: response_quality.py

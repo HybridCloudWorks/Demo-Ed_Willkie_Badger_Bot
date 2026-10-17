@@ -1,0 +1,37 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*-key.json
+credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# ADK / Agents CLI local state
+.adk/
+.google-agents-cli/
+.agents-cli-scripts/
+.saved_chats/
+tests/eval/results/
+deployment_metadata.json*
+
+# Terraform (only if you add it later)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

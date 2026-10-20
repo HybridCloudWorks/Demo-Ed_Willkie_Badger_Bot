@@ -50,19 +50,25 @@ The slide deck is `docs/Career_Day_2026_EWMS.pptx`; see *Slide deck* below.
 
 ## Slide deck
 
-`docs/Career_Day_2026_EWMS.pptx` is the 45-minute Career Day presentation. Slide 9
-(the live demo) and the closing slide carry the chatbot's address and a QR code so
-students can open it on their phones. The deck ships with a placeholder address.
-After you deploy (or if you want to show the laptop address), stamp the real one in
-once:
+`docs/Career_Day_2026_EWMS.pptx` is the 45-minute Career Day presentation for the
+topic *Cool Careers You've Never Heard Of*. It runs in four parts:
+
+| Slides | Part | Minutes |
+|---|---|---|
+| 1–7 | **The career**: your STEM story (slide 2, fill in your own moments), why the job did not exist yet, what a Cloud Architect does, the cloud, a day in the job | 0–14 |
+| 8–14 | **AI**: the stand-up game, what AI is, three activities, the four Badger rules | 14–34 |
+| 15–16 | **The demo**: the Badger Test on the live chatbot, then *The plan I drew for Badger AI* (the Google Cloud architecture with numbered, plain-English labels) | 34–39 |
+| 17–19 | **Close**: your path starts here, the takeaway, ask me anything | 39–45 |
+
+Slide 15 (the live demo) and slide 19 (the closing slide) carry the chatbot's
+address and a QR code so students can open it on their phones. If the address ever
+changes, stamp the new one in once:
 
 ```bash
 python scripts/set_deck_chat_url.py https://willkie-badger-ai-xxxxx-uc.a.run.app
 ```
 
-Slide 10, *The plan I drew for Badger AI*, is the Google Cloud agent architecture
-with numbered, plain-English labels (you, the rulebook, the brain, the library,
-where it lives, the helpers). Speaker notes are on every slide.
+Speaker notes with timings and transitions are on every slide.
 
 ## 60-Second Demo Setup
 

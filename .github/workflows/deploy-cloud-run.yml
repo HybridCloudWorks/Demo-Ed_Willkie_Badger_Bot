@@ -1,0 +1,93 @@
+# Deploys Willkie Badger AI to Cloud Run.
+#
+# Runs on every push to main that touches the app, or by hand from the Actions
+# tab ("Run workflow"). It does the same thing as the README's gcloud command:
+# Cloud Build builds the Dockerfile and Cloud Run serves it.
+#
+# One-time setup (repository Settings -> Secrets and variables -> Actions):
+#   Secret   GCP_SA_KEY        JSON key of a service account that may deploy.
+#                              Roles it needs on the project:
+#                                roles/run.admin
+#                                roles/cloudbuild.builds.editor
+#                                roles/artifactregistry.writer
+#                                roles/storage.admin        (source upload bucket)
+#                                roles/iam.serviceAccountUser
+#   Variable GCP_PROJECT_ID    The Google Cloud project ID (not the number).
+#   Variable GCP_REGION        Optional, defaults to us-central1.
+#
+# Create the service account and key with:
+#   gcloud iam service-accounts create github-deployer --display-name "GitHub deployer"
+#   for r in run.admin cloudbuild.builds.editor artifactregistry.writer storage.admin iam.serviceAccountUser; do
+#     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+#       --member "serviceAccount:github-deployer@$PROJECT_ID.iam.gserviceaccount.com" --role "roles/$r"
+#   done
+#   gcloud iam service-accounts keys create key.json \
+#     --iam-account "github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
+# then paste key.json into the GCP_SA_KEY secret and delete the local file.
+# (Workload Identity Federation is the keyless alternative; swap the auth step
+# for workload_identity_provider + service_account if you set that up.)
+
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "frontend/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - ".gcloudignore"
+      - ".github/workflows/deploy-cloud-run.yml"
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
+env:
+  SERVICE: willkie-badger-ai
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fail early if the deploy secret is missing
+        if: ${{ !secrets.GCP_SA_KEY || !vars.GCP_PROJECT_ID }}
+        run: |
+          echo "::error::Set the GCP_SA_KEY secret and the GCP_PROJECT_ID variable (see the comment at the top of this workflow)."
+          exit 1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source . \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$REGION"
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
+          echo "Service URL: $URL"
+          curl --fail --silent --show-error "$URL/api/health"
+          echo
+          curl --fail --silent --show-error "$URL/" | grep -q 'Badger Test' && echo "Chat page carries the new demo features."

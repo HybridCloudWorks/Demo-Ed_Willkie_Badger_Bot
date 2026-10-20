@@ -154,7 +154,12 @@ diagram: `docs/architecture.md`.
 
 ### Deploy to Cloud Run (optional)
 
-**Simplest path (works on Windows, macOS, Linux; no Agents CLI needed).**
+**From GitHub (after a one-time setup).** `.github/workflows/deploy-cloud-run.yml`
+deploys on every push to `main` that changes the app, or by hand from the
+*Actions* tab. It needs a `GCP_SA_KEY` secret and a `GCP_PROJECT_ID` variable;
+the comment at the top of the workflow lists the roles and the commands.
+
+**Simplest path by hand (works on Windows, macOS, Linux; no Agents CLI needed).**
 `gcloud run deploy --source` builds the `Dockerfile` with Cloud Build and deploys it:
 
 ```bash

@@ -13,6 +13,7 @@ is still here; we only add a student-friendly front door on top.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import uuid
@@ -21,7 +22,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.runners import Runner
@@ -60,9 +61,29 @@ app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) !=
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
 
 
+def asset_version() -> str:
+    """Short hash of the frontend files, computed once per process.
+
+    index.html references its stylesheet, script and mascot clips with
+    ?v=<this>, so browsers fetch fresh copies after every deploy instead of
+    showing a cached stylesheet with a new page.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(FRONTEND_DIR.rglob("*")):
+        if path.is_file():
+            digest.update(path.relative_to(FRONTEND_DIR).as_posix().encode())
+            digest.update(str(path.stat().st_mtime_ns).encode())
+            digest.update(str(path.stat().st_size).encode())
+    return digest.hexdigest()[:10]
+
+
+ASSET_VERSION = asset_version()
+
+
 @app.get("/", include_in_schema=False)
-async def chat_page() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "index.html")
+async def chat_page() -> HTMLResponse:
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8").replace("__V__", ASSET_VERSION)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 # --------------------------------------------------------------------------

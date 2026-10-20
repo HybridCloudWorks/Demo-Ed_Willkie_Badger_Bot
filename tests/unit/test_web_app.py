@@ -59,18 +59,25 @@ def test_chat_explains_the_not_found_step(client):
 
 def test_chat_page_has_demo_chips_and_welcome_panel(client):
     page = client.get("/").text
-    assert 'id="welcome"' in page
     assert "Badger Bridge" in page
     assert "mascota" in page
 
 
-def test_mascot_video_is_served(client):
+def test_mascot_clips_are_served(client):
     page = client.get("/").text
-    assert "/static/badger.mp4" in page and "/static/badger.jpg" in page
-    video = client.get("/static/badger.mp4")
+    assert "__V__" not in page                      # version placeholder was filled in
+    assert "/static/app.js?v=" in page and "/static/style.css?v=" in page
+    assert 'data-v="' in page
+    video = client.get("/static/mascot/wave.mp4")
     assert video.status_code == 200 and video.headers["content-type"].startswith("video/mp4")
     assert len(video.content) < 2_000_000  # keep the page quick on school Wi-Fi
-    assert client.get("/static/badger.jpg").status_code == 200
+    assert client.get("/static/mascot/wave.jpg").status_code == 200
+
+
+def test_chat_page_has_mascot_stage_and_how_i_work(client):
+    page = client.get("/").text
+    assert 'id="stage"' in page and 'id="mascot-caption"' in page
+    assert "How I work" in page
 
 
 def test_chat_rejects_empty_or_huge_messages(client):

@@ -1,7 +1,7 @@
 // Willkie Badger AI - chat page logic.
-// Sends questions to /api/chat, shows answers, and adds voice features that
-// fail softly: if the microphone or Read Aloud is unavailable, typing and
-// reading still work.
+// Sends questions to /api/chat, shows answers with the steps the agent took,
+// drives the animated mascot (one clip per state), and adds voice features
+// that fail softly: if the mic or Read Aloud is unavailable, typing still works.
 
 (function () {
   "use strict";
@@ -15,8 +15,7 @@
   const autoVoice = document.getElementById("auto-voice");
   const autoVoiceState = document.getElementById("auto-voice-state");
   const statusEl = document.getElementById("status");
-
-  const welcome = document.getElementById("welcome");
+  const ASSET_V = document.body.dataset.v || "";
 
   let sessionId = null;          // kept in memory only; nothing is stored
   let cloudTts = false;          // set from /api/health
@@ -25,13 +24,52 @@
   let questionCount = 0;
   const AUTO_VOICE_KEY = "badger-auto-voice";   // presenter preference only
 
-  // What the "thinking" bubble says while we wait. Mirrors the real steps
-  // the agent takes, so students connect the wait with the plan.
-  const THINKING_STEPS = [
-    "💬 Reading your question…",
-    "📚 Opening the school library…",
-    "🧠 Asking Gemini to write the answer…",
-  ];
+  // ---------- mascot ----------
+  // Each state is a short clip made with Google's Veo (scripts/generate_mascot_video.py).
+  // "loop" clips repeat; the others play once and fall back to idle.
+  const MASCOT = {
+    wave:      { caption: "Hi, Badgers!",                 loop: false },
+    idle:      { caption: "Ask me anything",              loop: true  },
+    listening: { caption: "I'm listening…",               loop: true  },
+    thinking:  { caption: "Checking the school library…", loop: true  },
+    found:     { caption: "Found it!",                    loop: false, red: true },
+    notfound:  { caption: "Not on the website. I won't guess.", loop: false },
+    talking:   { caption: "Here's what I found",          loop: true  },
+  };
+  const videos = [document.getElementById("mascot-a"), document.getElementById("mascot-b")];
+  const captionEl = document.getElementById("mascot-caption");
+  let front = 0;
+  let mascotState = null;
+  let afterOnce = "idle";        // state to return to when a play-once clip ends
+
+  function clipUrl(state) { return "/static/mascot/" + state + ".mp4?v=" + ASSET_V; }
+
+  function setMascot(state, fallback) {
+    if (!MASCOT[state] || state === mascotState) return;
+    const spec = MASCOT[state];
+    const back = 1 - front;
+    const nextVideo = videos[back];
+    mascotState = state;
+    afterOnce = fallback || "idle";
+    nextVideo.loop = spec.loop;
+    nextVideo.src = clipUrl(state);
+    nextVideo.onended = spec.loop ? null : function () { if (mascotState === state) setMascot(afterOnce); };
+    nextVideo.onerror = function () {              // clip missing: keep whatever is showing
+      if (mascotState === state) { mascotState = null; }
+    };
+    const show = function () {
+      nextVideo.removeEventListener("canplay", show);
+      nextVideo.play().catch(function () { /* autoplay blocked: poster stays */ });
+      nextVideo.classList.add("is-front");
+      videos[front].classList.remove("is-front");
+      front = back;
+      setTimeout(function () { videos[back === 0 ? 1 : 0].pause(); }, 400);
+    };
+    nextVideo.addEventListener("canplay", show);
+    nextVideo.load();
+    captionEl.textContent = spec.caption;
+    captionEl.classList.toggle("is-red", !!spec.red);
+  }
 
   // ---------- helpers ----------
   function addBubble(text, who, extraClass) {
@@ -46,15 +84,14 @@
     return bubble;
   }
 
-  // "How I answered": a small fold-out under each answer listing the steps
-  // the agent really took (library lookup, pages found, Gemini). This is the
-  // Cloud Architect "behind the scenes" moment.
+  // "How I answered": a fold-out under each answer listing the steps the agent
+  // really took (library lookup, pages found, Gemini).
   function addSteps(bubble, steps) {
     if (!steps || !steps.length) return;
     const details = document.createElement("details");
-    details.className = "how";
+    details.className = "how-steps";
     const summary = document.createElement("summary");
-    summary.textContent = "🔍 How I answered (" + steps.length + " steps)";
+    summary.textContent = "How I answered (" + steps.length + " steps)";
     details.appendChild(summary);
     const list = document.createElement("ol");
     steps.forEach(function (s) {
@@ -80,6 +117,15 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
+  // Which reaction fits the answer: the library found pages, found nothing, or
+  // the question was general knowledge.
+  function reactionFor(steps) {
+    const icons = (steps || []).map(function (s) { return s.icon; });
+    if (icons.indexOf("🤷") !== -1) return "notfound";
+    if (icons.indexOf("📚") !== -1) return "found";
+    return "talking";
+  }
+
   function setBusy(busy) {
     sendBtn.disabled = busy;
     input.disabled = busy;
@@ -91,16 +137,12 @@
     const q = (question || "").trim();
     if (!q) return;
     stopAudio();
-    if (welcome) welcome.classList.add("hidden");   // make room for the conversation
     addBubble(q, "student");
     input.value = "";
     setBusy(true);
-    const typing = addBubble(THINKING_STEPS[0], "bot", "typing");
-    let stepIndex = 0;
-    const ticker = setInterval(function () {
-      stepIndex = Math.min(stepIndex + 1, THINKING_STEPS.length - 1);
-      typing.querySelector(".text").textContent = THINKING_STEPS[stepIndex];
-    }, 900);
+    setMascot("thinking");
+    const typing = addBubble("Checking the school library…", "bot", "typing");
+    const ticker = setTimeout(function () { typing.querySelector(".text").textContent = "Asking Gemini to write the answer…"; }, 1500);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -108,10 +150,11 @@
         body: JSON.stringify({ message: q, session_id: sessionId }),
       });
       const data = await res.json().catch(function () { return {}; });
-      clearInterval(ticker);
+      clearTimeout(ticker);
       typing.remove();
       if (!res.ok) {
         addBubble(data.detail || "Something went wrong. Please try again.", "bot", "error");
+        setMascot("notfound");
         return;
       }
       sessionId = data.session_id;
@@ -120,11 +163,18 @@
       lastReply = data.reply;
       questionCount += 1;
       updateStatus();
-      if (autoVoice.checked) speak(lastReply);   // Auto voice is opt-in
+      const reaction = reactionFor(data.steps);
+      if (autoVoice.checked) {
+        setMascot(reaction, "talking");   // react, then keep talking while the voice plays
+        speak(lastReply);
+      } else {
+        setMascot(reaction, "idle");
+      }
     } catch (err) {
-      clearInterval(ticker);
+      clearTimeout(ticker);
       typing.remove();
       addBubble("I can't reach the server right now. Is the app still running?", "bot", "error");
+      setMascot("notfound");
     } finally {
       setBusy(false);
     }
@@ -141,16 +191,20 @@
   });
 
   // ---------- Read Aloud (text-to-speech) ----------
-  // One button next to the input reads the latest answer; it turns into Stop
-  // while audio is playing. The Auto voice toggle plays each new answer.
   function markPlaying() {
     readBtn.classList.add("playing");
-    readBtn.textContent = "⏹ Stop";
+    readBtn.title = "Stop";
+    readBtn.textContent = "⏹";
+    if (mascotState !== "found" && mascotState !== "notfound") setMascot("talking");
+    afterOnce = "talking";
   }
 
   function markStopped() {
     readBtn.classList.remove("playing");
-    readBtn.textContent = "🔊 Read Aloud";
+    readBtn.title = "Read the latest answer aloud";
+    readBtn.textContent = "🔊";
+    afterOnce = "idle";
+    if (mascotState === "talking") setMascot("idle");
   }
 
   function stopAudio() {
@@ -164,18 +218,19 @@
 
   function speakWithBrowser(text) {
     if (!("speechSynthesis" in window)) {
-      readBtn.textContent = "Voice not available";
+      readBtn.title = "Voice not available";
       readBtn.disabled = true;
       autoVoice.checked = false;
       autoVoice.disabled = true;
       return;
     }
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "en-US";
+    utter.lang = /[áéíóúñ¿¡]/i.test(text) ? "es-US" : "en-US";
     utter.rate = 0.95;
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(function (v) { return /en[-_]US/i.test(v.lang) && /Google|Natural|Online/i.test(v.name); })
-      || voices.find(function (v) { return /en[-_]US/i.test(v.lang); });
+    const wantLang = new RegExp("^" + utter.lang.slice(0, 2), "i");
+    const preferred = voices.find(function (v) { return wantLang.test(v.lang) && /Google|Natural|Online/i.test(v.name); })
+      || voices.find(function (v) { return wantLang.test(v.lang); });
     if (preferred) utter.voice = preferred;
     utter.onend = markStopped;
     utter.onerror = markStopped;
@@ -185,7 +240,8 @@
   }
 
   async function speak(text) {
-    stopAudio();
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!text) return;
     if (cloudTts) {
       // Try Google Cloud Text-to-Speech first; fall back to the browser voice.
@@ -259,10 +315,12 @@
         recognizer.onend = function () {
           recognizer = null;
           micBtn.classList.remove("listening");
-          micBtn.textContent = "🎤 Ask";
+          micBtn.title = "Ask with your voice";
+          if (mascotState === "listening") setMascot("idle");
         };
         micBtn.classList.add("listening");
-        micBtn.textContent = "🎤 Listening…";
+        micBtn.title = "Listening… click to stop";
+        setMascot("listening");
         recognizer.start();
       } catch (err) {
         recognizer = null;
@@ -275,9 +333,9 @@
   let health = null;
   function updateStatus() {
     if (!health) return;
-    statusEl.textContent = "Model: " + health.model + " · Voice: " + (cloudTts ? "Google Cloud" : "browser") +
-      " · Library: " + health.knowledge_pages + " pages" +
-      (questionCount ? " · Questions: " + questionCount : "");
+    statusEl.textContent = "Model " + health.model + " · Voice " + (cloudTts ? "Google Cloud" : "browser") +
+      " · Library " + health.knowledge_pages + " pages" +
+      (questionCount ? " · Questions " + questionCount : "");
   }
   fetch("/api/health")
     .then(function (r) { return r.json(); })
@@ -288,5 +346,6 @@
     })
     .catch(function () { statusEl.textContent = "Server not reachable"; });
 
+  setMascot("wave", "idle");
   input.focus();
 })();

@@ -43,12 +43,14 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 
 CLOUD_TTS_ENABLED = os.getenv("ENABLE_CLOUD_TTS", "false").lower() == "true"
 # Cloud voices: one per language. The badger is a kid, so the defaults are
-# youthful male voices lifted a few semitones. es-US is Latin American Spanish.
+# "Puck", Google's youthful, upbeat male Chirp 3 HD voice. es-US is Latin
+# American Spanish. Chirp 3 HD voices reject a pitch change, so pitch stays 0
+# unless you switch to a Neural2 voice (for example en-US-Neural2-D, pitch 3).
 CLOUD_TTS_VOICES = {
-    "en-US": os.getenv("CLOUD_TTS_VOICE", "en-US-Neural2-D"),
-    "es-US": os.getenv("CLOUD_TTS_VOICE_ES", "es-US-Neural2-B"),
+    "en-US": os.getenv("CLOUD_TTS_VOICE", "en-US-Chirp3-HD-Puck"),
+    "es-US": os.getenv("CLOUD_TTS_VOICE_ES", "es-US-Chirp3-HD-Puck"),
 }
-CLOUD_TTS_PITCH = float(os.getenv("CLOUD_TTS_PITCH", "3.0"))        # semitones, -20..20
+CLOUD_TTS_PITCH = float(os.getenv("CLOUD_TTS_PITCH", "0"))        # semitones, -20..20
 CLOUD_TTS_RATE = float(os.getenv("CLOUD_TTS_RATE", "1.05"))
 MAX_QUESTION_CHARS = 500
 MAX_TTS_CHARS = 1500
@@ -228,7 +230,7 @@ def synthesize_speech(text: str, lang: str = "en-US") -> bytes:
         audio_config=texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
             speaking_rate=CLOUD_TTS_RATE,
-            pitch=CLOUD_TTS_PITCH,
+            **({"pitch": CLOUD_TTS_PITCH} if CLOUD_TTS_PITCH else {}),
         ),
     )
     return response.audio_content

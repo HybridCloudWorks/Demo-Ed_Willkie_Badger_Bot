@@ -78,6 +78,10 @@ jobs:
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
+            --min-instances 2 \
+            --cpu 2 \
+            --memory 1Gi \
+            --cpu-boost \
             --quiet \
             --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$GEMINI_LOCATION,ENABLE_CLOUD_TTS=true,CLOUD_TTS_VOICE=$TTS_VOICE_EN,CLOUD_TTS_VOICE_ES=$TTS_VOICE_ES,CLOUD_TTS_PITCH=0"
 

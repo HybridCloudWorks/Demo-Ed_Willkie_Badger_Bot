@@ -13,6 +13,7 @@ is still here; we only add a student-friendly front door on top.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
@@ -218,12 +219,25 @@ class TtsRequest(BaseModel):
 _tts_cache: OrderedDict[str, bytes] = OrderedDict()
 
 
+_tts_client = None
+
+
+def tts_client():
+    """One Text-to-Speech client per process (creating one costs ~0.5 s)."""
+    global _tts_client
+    if _tts_client is None:
+        from google.cloud import texttospeech  # imported lazily: optional dependency
+
+        _tts_client = texttospeech.TextToSpeechClient()
+    return _tts_client
+
+
 def synthesize_speech(text: str, lang: str = "en-US") -> bytes:
     """Call Google Cloud Text-to-Speech and return MP3 bytes."""
     from google.cloud import texttospeech  # imported lazily: optional dependency
 
     voice_name = CLOUD_TTS_VOICES.get(lang, CLOUD_TTS_VOICES["en-US"])
-    client = texttospeech.TextToSpeechClient()
+    client = tts_client()
     response = client.synthesize_speech(
         input=texttospeech.SynthesisInput(text=text),
         voice=texttospeech.VoiceSelectionParams(language_code=voice_name[:5], name=voice_name),
@@ -244,7 +258,8 @@ async def tts(req: TtsRequest) -> Response:
     key = f"{req.lang}:{text}"
     if key not in _tts_cache:
         try:
-            _tts_cache[key] = synthesize_speech(text, req.lang)
+            # Off the event loop: a 3 s synthesis must not stall other students' questions.
+            _tts_cache[key] = await asyncio.to_thread(synthesize_speech, text, req.lang)
         except Exception as exc:  # noqa: BLE001
             log.exception("cloud tts failed")
             raise HTTPException(status_code=503, detail="Cloud Text-to-Speech failed.") from exc

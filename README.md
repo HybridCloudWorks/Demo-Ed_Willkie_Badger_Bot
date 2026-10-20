@@ -33,10 +33,14 @@ The shortest reliable path, in the order you will present it.
    then click **🔊 Read Aloud** (next to the text box) to hear the latest answer. The
    button turns into **⏹ Stop** while audio plays. Flip **Auto voice** (top right)
    to on if you want every new answer read aloud automatically.
-6. **Wow moment 4 – Behind the scenes**: under every answer, click
+6. **The badger reacts**: the mascot in the top-right frame waves on load, listens
+   when the mic is on, thinks while the library is searched, celebrates when it
+   finds the answer, shrugs when the website has nothing, and talks while an
+   answer is read aloud. Each reaction is a separate Veo clip.
+7. **Wow moment 4 – Behind the scenes**: under every answer, click
    **🔍 How I answered**. It lists the steps the agent really took: opened the
    school library, which pages it found (or nothing), then Gemini wrote the answer.
-7. **The Badger Test** (shows grounding): click the dark **🌉 The Badger Test** chip.
+8. **The Badger Test** (shows grounding): click the dark **The Badger Test** chip.
    It asks about a "famous Badger Bridge built in 1901" that does not exist. The bot
    answers that it couldn't find that on the school website, and *How I answered*
    shows why. The **🌎 Spanish** chip shows the same bot answering in Spanish.
@@ -214,11 +218,11 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
 * No accounts, no student names, no chat history saved, no audio stored.
 * `app/school_knowledge.json` contains only public, institutional information
   from ewms.emsisd.com (no student information, no staff emails).
-* The animated badger in the header is an **original cartoon mascot** made with
-  Google's Veo video model (`scripts/generate_mascot_video.py`). It is not the
-  school's logo; no official school/district trademark is included. Swap in an
-  authorized asset only if the school approves; see the comment in
-  `frontend/index.html`.
+* The animated badger is an **original cartoon mascot** made with Google's Veo
+  video model (`scripts/generate_mascot_video.py`, one clip per reaction in
+  `frontend/mascot/`). It is not the school's logo; no official school/district
+  trademark is included. Swap in an authorized asset only if the school
+  approves; see the comment in `frontend/index.html`.
 
 ## Tests
 
@@ -250,7 +254,7 @@ app/agent.py                  the agent  <- SHOW THIS FILE
 app/school_knowledge.py       search over the cached school pages
 app/school_knowledge.json     the cached public pages
 app/fast_api_app.py           web server (/, /api/chat, /api/tts, /dev-ui)
-frontend/                     chat page: index.html, style.css, app.js, badger.mp4 (mascot)
+frontend/                     chat page: index.html, style.css, app.js, mascot/ (Veo clips)
 tests/                        unit tests (no key) + eval dataset
 scripts/career_day_check.py   live check of the Career Day questions
 scripts/refresh_school_knowledge.py   optional refresh of the cached pages

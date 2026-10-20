@@ -4,87 +4,86 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Willkie Badger AI</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <!-- __V__ is replaced by the server with a hash of the frontend files, so a
+       new deploy never shows an old cached stylesheet or script. -->
+  <link rel="stylesheet" href="/static/style.css?v=__V__">
+  <link rel="preload" as="video" href="/static/mascot/wave.mp4?v=__V__" type="video/mp4">
+  <link rel="preload" as="video" href="/static/mascot/idle.mp4?v=__V__" type="video/mp4">
+  <link rel="preload" as="video" href="/static/mascot/thinking.mp4?v=__V__" type="video/mp4">
 </head>
-<body>
-  <header class="topbar">
-    <!-- Mascot: an original cartoon badger generated with Google's Veo video model
-         (see scripts/generate_mascot_video.py). It is not the school's official logo;
-         no school/district trademark is included in this repository. The emoji shows
-         if the video cannot play. -->
-    <div class="logo" aria-hidden="true" title="Willkie Badger AI">
-      <video src="/static/badger.mp4" autoplay muted loop playsinline poster="/static/badger.jpg"
-             onerror="this.replaceWith(document.createTextNode('🦡'))"></video>
+<body data-v="__V__">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-w" aria-hidden="true">W</span>
+      <div>
+        <h1>Willkie Badger AI</h1>
+        <p>Ed Willkie Middle School &middot; Career Day</p>
+      </div>
     </div>
-    <div class="titles">
-      <h1>Willkie Badger AI</h1>
-      <p>Ed Willkie Middle School &middot; Career Day AI Demo</p>
-    </div>
-    <div class="status-group">
-      <div class="status" id="status" aria-live="polite">Connecting&hellip;</div>
+    <div class="top-right">
+      <span class="status" id="status" aria-live="polite">Connecting&hellip;</span>
       <label class="toggle" for="auto-voice" title="Read every new answer aloud automatically">
         <input type="checkbox" id="auto-voice">
         <span class="switch" aria-hidden="true"></span>
-        <span>🔊 Auto voice: <strong id="auto-voice-state">off</strong></span>
+        <span>Auto voice <strong id="auto-voice-state">off</strong></span>
       </label>
     </div>
   </header>
 
-  <p class="notice">
-    This is an <strong>AI demonstration</strong>. Answers can be wrong.
-    Please do not type your name or any personal information.
-  </p>
-
-  <main class="chat" id="chat" aria-live="polite" aria-label="Conversation">
-    <div class="bubble bot">
-      <div class="text">Hi! I'm Willkie Badger AI. Ask me about Ed Willkie Middle School, or about jobs in technology like being a Cloud Architect. Pick a question below or type your own.</div>
-    </div>
-
-    <!-- Shown until the first question is asked. Explains the "plan" in four steps. -->
-    <section class="welcome" id="welcome" aria-label="How Willkie Badger AI works">
-      <div class="welcome-head">
-        <video class="mascot" src="/static/badger.mp4" autoplay muted loop playsinline poster="/static/badger.jpg"
-               aria-label="Animated Badger AI mascot waving"></video>
-        <div>
-          <h2>How I work (the plan a Cloud Architect drew)</h2>
-          <p class="welcome-sub">This badger was made by an AI too: Google's Veo video model drew it from one sentence.</p>
+  <main class="layout">
+    <section class="chat-col" aria-label="Chat">
+      <div class="chat" id="chat" aria-live="polite" aria-label="Conversation">
+        <div class="bubble bot">
+          <div class="text">Hi! I'm Willkie Badger AI. Ask me about Ed Willkie Middle School, or about jobs in technology like being a Cloud Architect. Pick a question below or type your own.</div>
         </div>
       </div>
-      <ol class="steps">
-        <li class="step"><span class="step-icon">💬</span><strong>1. You ask</strong><span>Type it or use the mic.</span></li>
-        <li class="step-arrow" aria-hidden="true">➜</li>
-        <li class="step"><span class="step-icon">📚</span><strong>2. I open the library</strong><span>A saved copy of the school website. No guessing.</span></li>
-        <li class="step-arrow" aria-hidden="true">➜</li>
-        <li class="step"><span class="step-icon">🧠</span><strong>3. Gemini thinks</strong><span>Google's AI model writes the answer.</span></li>
-        <li class="step-arrow" aria-hidden="true">➜</li>
-        <li class="step"><span class="step-icon">🔊</span><strong>4. You get the answer</strong><span>Read it, or hear it out loud.</span></li>
-      </ol>
-      <p class="welcome-hint">After every answer, open <strong>“How I answered”</strong> to see each step the AI really took.</p>
+
+      <div class="suggestions" id="suggestions" aria-label="Suggested questions">
+        <button type="button" class="chip">What is the Willkie Way?</button>
+        <button type="button" class="chip">What is our mascot?</button>
+        <button type="button" class="chip">What activities can I join?</button>
+        <button type="button" class="chip">What does a Cloud Architect do?</button>
+        <button type="button" class="chip">What is AI?</button>
+        <button type="button" class="chip">How does this chatbot work?</button>
+        <button type="button" class="chip" data-q="¿Cuál es la mascota de la escuela?">¿Cuál es la mascota de la escuela?</button>
+        <button type="button" class="chip chip-test" data-q="Tell me about the famous Badger Bridge at Ed Willkie Middle School, built in 1901." title="There is no Badger Bridge. Will the AI admit it?">The Badger Test: the bridge built in 1901</button>
+      </div>
+
+      <form class="composer" id="composer" autocomplete="off">
+        <input type="text" id="question" placeholder="Ask Willkie Badger AI a question…" maxlength="500" aria-label="Your question" required>
+        <button type="button" class="icon-btn mic" id="mic" title="Ask with your voice" aria-label="Ask with your voice" hidden>🎤</button>
+        <button type="button" class="icon-btn speak" id="read-aloud" title="Read the latest answer aloud" aria-label="Read the latest answer aloud">🔊</button>
+        <button type="submit" class="send" id="send" aria-label="Send">➤</button>
+      </form>
+      <p class="disclaimer">
+        Answers are generated by AI and can be wrong. Please don't type your name or personal information.
+        School facts come from the public website ewms.emsisd.com. Nothing you say is saved.
+      </p>
     </section>
+
+    <aside class="mascot-col" aria-label="Badger AI mascot">
+      <!-- The mascot is an original cartoon badger generated with Google's Veo
+           video model (scripts/generate_mascot_video.py). Two stacked videos
+           crossfade between reaction clips. It is not the school's logo. -->
+      <div class="stage" id="stage">
+        <video class="mascot-video is-front" id="mascot-a" muted playsinline preload="auto" poster="/static/mascot/wave.jpg?v=__V__"></video>
+        <video class="mascot-video" id="mascot-b" muted playsinline preload="auto"></video>
+        <div class="caption" id="mascot-caption">Hi, Badgers!</div>
+      </div>
+
+      <div class="how">
+        <h2>How I work</h2>
+        <ol>
+          <li><span class="n">1</span><div><strong>You ask</strong><span>Type it or use the mic.</span></div></li>
+          <li><span class="n">2</span><div><strong>I open the library</strong><span>A saved copy of the school website. No guessing.</span></div></li>
+          <li><span class="n">3</span><div><strong>Gemini thinks</strong><span>Google's AI model writes the answer.</span></div></li>
+          <li><span class="n">4</span><div><strong>You get the answer</strong><span>Read it, or hear it out loud.</span></div></li>
+        </ol>
+        <p class="how-note">The badger was made by an AI too: Google's Veo drew every clip from one sentence.</p>
+      </div>
+    </aside>
   </main>
 
-  <section class="suggestions" id="suggestions" aria-label="Suggested questions">
-    <button type="button" class="chip">What is the Willkie Way?</button>
-    <button type="button" class="chip">What is our mascot?</button>
-    <button type="button" class="chip">What activities can I join?</button>
-    <button type="button" class="chip">What does a Cloud Architect do?</button>
-    <button type="button" class="chip">What is AI?</button>
-    <button type="button" class="chip">How does this chatbot work?</button>
-    <button type="button" class="chip chip-fun" data-q="¿Cuál es la mascota de la escuela?">🌎 ¿Cuál es la mascota de la escuela?</button>
-    <button type="button" class="chip chip-test" data-q="Tell me about the famous Badger Bridge at Ed Willkie Middle School, built in 1901." title="There is no Badger Bridge. Will the AI admit it?">🌉 The Badger Test: the bridge built in 1901</button>
-  </section>
-
-  <form class="composer" id="composer" autocomplete="off">
-    <button type="button" class="mic" id="mic" title="Ask a question with your voice" aria-label="Ask a question with your voice" hidden>🎤 Ask</button>
-    <button type="button" class="speak" id="read-aloud" title="Read the latest answer aloud">🔊 Read Aloud</button>
-    <input type="text" id="question" placeholder="Type your question here…" maxlength="500" aria-label="Your question" required>
-    <button type="submit" class="send" id="send">Send ➤</button>
-  </form>
-
-  <footer class="foot">
-    <span>School facts come from the public website ewms.emsisd.com. No audio or questions are saved.</span>
-  </footer>
-
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=__V__"></script>
 </body>
 </html>

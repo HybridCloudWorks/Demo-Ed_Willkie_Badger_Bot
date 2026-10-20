@@ -145,7 +145,7 @@ and the Google Cloud deployment diagram. In short:
 
 | Resource | Why it exists |
 |---|---|
-| **Cloud Run** service `willkie-badger-ai` | Where the app lives. One instance stays warm (`--min-instances 1`) so the first question never waits on a cold start; set it to 0 after Career Day to pay nothing between demos. |
+| **Cloud Run** service `willkie-badger-ai` | Where the app lives. Sized for the day: two instances stay warm with 2 vCPU / 1 GiB each (`--min-instances 2 --cpu 2 --memory 1Gi`), so no question waits on a cold start. After Career Day set min instances to 0 (or redeploy with the flags removed) to pay nothing between demos. |
 | **Vertex AI → Gemini** | The brain. Called through an API by the agent. |
 | **Service account + IAM** (`roles/aiplatform.user`) | The app's ID badge. No API key stored anywhere. |
 | **Artifact Registry / Cloud Build** | Where the container image is built and kept. |
@@ -220,7 +220,8 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
   depends on the laptop.
 * If the browser has no voices (rare), the button says so and chat continues.
 * **🎤 Ask** listens until the student pauses, shows what it heard in the box,
-  and sends it after a 2-second countdown on the Send button. Click the box,
+  and sends it after a 1-second countdown on the Send button (about two
+  seconds from the end of the question). Click the box,
   type, or click the mic again to cancel. Use Chrome or Edge; allow the
   microphone once when asked.
 * Speech starts about a second after the answer appears: the first sentence

@@ -8,10 +8,14 @@
 </head>
 <body>
   <header class="topbar">
-    <!-- LOGO PLACEHOLDER: replace this circle with an authorized school logo
-         (for example <img src="/static/logo.png" alt="Ed Willkie Middle School">).
-         No official school/district trademark is included in this repository. -->
-    <div class="logo" aria-hidden="true" title="Logo placeholder">🦡</div>
+    <!-- Mascot: an original cartoon badger generated with Google's Veo video model
+         (see scripts/generate_mascot_video.py). It is not the school's official logo;
+         no school/district trademark is included in this repository. The emoji shows
+         if the video cannot play. -->
+    <div class="logo" aria-hidden="true" title="Willkie Badger AI">
+      <video src="/static/badger.mp4" autoplay muted loop playsinline poster="/static/badger.jpg"
+             onerror="this.replaceWith(document.createTextNode('🦡'))"></video>
+    </div>
     <div class="titles">
       <h1>Willkie Badger AI</h1>
       <p>Ed Willkie Middle School &middot; Career Day AI Demo</p>
@@ -38,7 +42,14 @@
 
     <!-- Shown until the first question is asked. Explains the "plan" in four steps. -->
     <section class="welcome" id="welcome" aria-label="How Willkie Badger AI works">
-      <h2>How I work (the plan a Cloud Architect drew)</h2>
+      <div class="welcome-head">
+        <video class="mascot" src="/static/badger.mp4" autoplay muted loop playsinline poster="/static/badger.jpg"
+               aria-label="Animated Badger AI mascot waving"></video>
+        <div>
+          <h2>How I work (the plan a Cloud Architect drew)</h2>
+          <p class="welcome-sub">This badger was made by an AI too: Google's Veo video model drew it from one sentence.</p>
+        </div>
+      </div>
       <ol class="steps">
         <li class="step"><span class="step-icon">💬</span><strong>1. You ask</strong><span>Type it or use the mic.</span></li>
         <li class="step-arrow" aria-hidden="true">➜</li>

@@ -64,6 +64,15 @@ def test_chat_page_has_demo_chips_and_welcome_panel(client):
     assert "mascota" in page
 
 
+def test_mascot_video_is_served(client):
+    page = client.get("/").text
+    assert "/static/badger.mp4" in page and "/static/badger.jpg" in page
+    video = client.get("/static/badger.mp4")
+    assert video.status_code == 200 and video.headers["content-type"].startswith("video/mp4")
+    assert len(video.content) < 2_000_000  # keep the page quick on school Wi-Fi
+    assert client.get("/static/badger.jpg").status_code == 200
+
+
 def test_chat_rejects_empty_or_huge_messages(client):
     assert client.post("/api/chat", json={"message": ""}).status_code == 422
     assert client.post("/api/chat", json={"message": "x" * 501}).status_code == 422

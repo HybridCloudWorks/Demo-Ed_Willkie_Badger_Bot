@@ -1,12 +1,14 @@
 /* Willkie Badger AI - projection-friendly chat styling.
    School colors: change the four values below to match approved branding. */
 :root {
-  --school-primary: #b3122b;   /* badger red */
-  --school-dark: #1b1b1f;      /* near black */
-  --school-light: #fff6f7;     /* soft tint for student bubbles */
-  --accent: #ffb703;           /* gold highlight */
-  --bg: #f4f4f6;
-  --text: #16161a;
+  /* School colors from the Badgers logo: cardinal red, black, white. */
+  --school-primary: #c8102e;   /* cardinal red */
+  --school-dark: #0f0f10;      /* black */
+  --school-light: #fbeaec;     /* red tint for student bubbles */
+  --accent: #ffffff;           /* white highlight */
+  --silver: #d9d9de;           /* borders and quiet accents */
+  --bg: #f3f3f5;
+  --text: #121214;
   --bot-bubble: #ffffff;
   --radius: 18px;
 }
@@ -43,7 +45,9 @@ body {
   font-size: 44px;
   border: 4px solid var(--accent);
   flex-shrink: 0;
+  overflow: hidden;
 }
+.logo video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .titles h1 { margin: 0; font-size: 2rem; letter-spacing: 0.5px; }
 .titles p { margin: 2px 0 0; opacity: 0.9; font-size: 1rem; }
 .status-group {
@@ -89,7 +93,7 @@ body {
   background: #fff;
   transition: transform 0.15s ease;
 }
-.toggle input:checked + .switch { background: var(--accent); }
+.toggle input:checked + .switch { background: var(--school-primary); box-shadow: inset 0 0 0 2px #fff; }
 .toggle input:checked + .switch::after { transform: translateX(20px); }
 .toggle input:focus-visible + .switch { outline: 3px solid #fff; outline-offset: 2px; }
 
@@ -126,7 +130,7 @@ body {
 .bubble.student {
   align-self: flex-end;
   background: var(--school-light);
-  border-right: 8px solid var(--accent);
+  border-right: 8px solid var(--school-primary);
 }
 .bubble.error { border-left-color: #b00020; background: #fdecee; }
 .bubble.typing { opacity: 0.7; font-style: italic; }
@@ -187,11 +191,21 @@ body {
   border-radius: var(--radius);
   padding: 16px 20px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  border: 3px dashed var(--accent);
+  border: 3px dashed var(--school-primary);
   flex-shrink: 0;
 }
 .welcome.hidden { display: none; }
-.welcome h2 { margin: 0 0 12px; font-size: 1.05rem; color: var(--school-dark); }
+.welcome-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.welcome h2 { margin: 0; font-size: 1.05rem; color: var(--school-dark); }
+.welcome-sub { margin: 4px 0 0; font-size: 0.8rem; color: #555; }
+.mascot {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--school-primary);
+  background: #fff;
+  flex-shrink: 0;
+}
 .steps {
   list-style: none;
   margin: 0;
@@ -230,7 +244,7 @@ button {
   transition: transform 0.05s ease, filter 0.1s ease;
 }
 button:active { transform: scale(0.97); }
-button:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
+button:focus-visible { outline: 4px solid var(--school-primary); outline-offset: 2px; }
 button:disabled { opacity: 0.5; cursor: default; }
 
 
@@ -249,7 +263,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   font-weight: 600;
 }
 .chip:hover { background: var(--school-light); }
-.chip-fun { border-color: var(--accent); }
+.chip-fun { border-color: var(--school-dark); }
 .chip-test { background: var(--school-dark); color: #fff; border-color: var(--school-dark); }
 .chip-test:hover { background: #000; }
 

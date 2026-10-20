@@ -33,10 +33,32 @@ The shortest reliable path, in the order you will present it.
    then click **🔊 Read Aloud** (next to the text box) to hear the latest answer. The
    button turns into **⏹ Stop** while audio plays. Flip **Auto voice** (top right)
    to on if you want every new answer read aloud automatically.
-6. **Challenge question** (shows grounding): *"Who won the 7th grade spelling bee
-   last year?"* The bot answers that it couldn't find that on the school website.
+6. **Wow moment 4 – Behind the scenes**: under every answer, click
+   **🔍 How I answered**. It lists the steps the agent really took: opened the
+   school library, which pages it found (or nothing), then Gemini wrote the answer.
+7. **The Badger Test** (shows grounding): click the dark **🌉 The Badger Test** chip.
+   It asks about a "famous Badger Bridge built in 1901" that does not exist. The bot
+   answers that it couldn't find that on the school website, and *How I answered*
+   shows why. The **🌎 Spanish** chip shows the same bot answering in Spanish.
 
 Presenter talking points and the backup plan are in `docs/presentation-notes.md`.
+The slide deck is `docs/Career_Day_2026_EWMS.pptx`; see *Slide deck* below.
+
+## Slide deck
+
+`docs/Career_Day_2026_EWMS.pptx` is the 45-minute Career Day presentation. Slide 9
+(the live demo) and the closing slide carry the chatbot's address and a QR code so
+students can open it on their phones. The deck ships with a placeholder address.
+After you deploy (or if you want to show the laptop address), stamp the real one in
+once:
+
+```bash
+python scripts/set_deck_chat_url.py https://willkie-badger-ai-xxxxx-uc.a.run.app
+```
+
+Slide 10, *The plan I drew for Badger AI*, is the Google Cloud agent architecture
+with numbered, plain-English labels (you, the rulebook, the brain, the library,
+where it lives, the helpers). Speaker notes are on every slide.
 
 ## 60-Second Demo Setup
 
@@ -102,7 +124,8 @@ See `docs/architecture.md` for the accurate request flow, the grounding design,
 and the Google Cloud deployment diagram. In short:
 
 * `frontend/` (static HTML/JS) → `POST /api/chat` on a FastAPI server built by
-  ADK's `get_fast_api_app` → `Runner` → `Agent` (`gemini-3.8-flash`).
+  ADK's `get_fast_api_app` → `Runner` → `Agent` (`gemini-3.8-flash`). The
+  response carries `steps` (tool call, pages found, model) for *How I answered*.
 * The agent's only tool, `look_up_school_info`, does a keyword search over
   `app/school_knowledge.json` (26 public pages cached from ewms.emsisd.com).
 * Sessions are in-memory. No database, no auth, no analytics.
@@ -192,7 +215,7 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
 
 ```bash
 pytest -q                           # no API key needed (scripted model), ~2 s
-python scripts/career_day_check.py  # live: the six Career Day questions
+python scripts/career_day_check.py  # live: the eight Career Day questions (incl. the Badger Test)
 agents-cli eval run                 # optional LLM-graded eval (tests/eval)
 ```
 
@@ -220,9 +243,10 @@ app/school_knowledge.json     the cached public pages
 app/fast_api_app.py           web server (/, /api/chat, /api/tts, /dev-ui)
 frontend/                     chat page: index.html, style.css, app.js
 tests/                        unit tests (no key) + eval dataset
-scripts/career_day_check.py   live check of the six Career Day questions
+scripts/career_day_check.py   live check of the Career Day questions
 scripts/refresh_school_knowledge.py   optional refresh of the cached pages
-docs/                         diagrams and presenter notes
+scripts/set_deck_chat_url.py  put the real chat URL + QR codes into the slide deck
+docs/                         slide deck, diagrams and presenter notes
 Dockerfile, agents-cli-manifest.yaml  Cloud Run deployment
 .env.example                  configuration template (never commit .env)
 ```

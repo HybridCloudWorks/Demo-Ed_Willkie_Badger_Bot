@@ -19,7 +19,7 @@ dependencies = [
 # used when this is not installed or not enabled, so the demo never depends on it.
 tts = ["google-cloud-texttospeech>=2.16.0,<3.0.0"]
 # Tests you can run without any API key.
-dev = ["pytest>=8.0,<10", "pytest-asyncio>=0.23,<2", "httpx>=0.27,<1"]
+dev = ["pytest>=8.0,<10", "pytest-asyncio>=0.23,<2", "httpx>=0.27,<1", "segno>=1.6,<2"]
 # `agents-cli eval run` (LLM-graded evaluation; needs a Gemini key or ADC).
 eval = ["google-adk[eval]>=2.9.2,<3.0.0", "google-cloud-aiplatform[evaluation]>=1.156.0,<2.0.0"]
 

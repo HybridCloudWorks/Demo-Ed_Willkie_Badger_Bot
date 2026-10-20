@@ -42,6 +42,28 @@ def test_chat_endpoint_round_trip(client):
     assert r2.status_code == 200 and r2.json()["session_id"] == body["session_id"]
 
 
+def test_chat_explains_its_steps_for_a_school_question(client):
+    body = client.post("/api/chat", json={"message": "What is our mascot?"}).json()
+    titles = [s["title"] for s in body["steps"]]
+    assert titles[0] == "Opened the school library"
+    assert titles[1].startswith("Found ")
+    assert "Gemini wrote the answer" in titles[-1]
+    assert all({"icon", "title", "detail"} <= set(s) for s in body["steps"])
+
+
+def test_chat_explains_the_not_found_step(client):
+    body = client.post("/api/chat", json={"message": "What is the cafeteria pizza recipe on Tuesdays?"}).json()
+    assert "couldn't find" in body["reply"]
+    assert any(s["icon"] == "🤷" for s in body["steps"])
+
+
+def test_chat_page_has_demo_chips_and_welcome_panel(client):
+    page = client.get("/").text
+    assert 'id="welcome"' in page
+    assert "Badger Bridge" in page
+    assert "mascota" in page
+
+
 def test_chat_rejects_empty_or_huge_messages(client):
     assert client.post("/api/chat", json={"message": ""}).status_code == 422
     assert client.post("/api/chat", json={"message": "x" * 501}).status_code == 422

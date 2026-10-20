@@ -95,9 +95,61 @@ class ChatRequest(BaseModel):
     session_id: str | None = Field(default=None, max_length=64)
 
 
+class Step(BaseModel):
+    """One thing the agent did on the way to its answer, in student words.
+
+    The chat page shows these under each answer ("How I answered") so students
+    can see the AI open the school "library" before the Gemini "brain" writes.
+    """
+
+    icon: str
+    title: str
+    detail: str = ""
+
+
 class ChatResponse(BaseModel):
     reply: str
     session_id: str
+    steps: list[Step] = Field(default_factory=list)
+
+
+def describe_steps(events: list) -> list[Step]:
+    """Turn ADK events (tool calls, tool results, final text) into plain-English steps."""
+    steps: list[Step] = []
+    used_library = False
+    for event in events:
+        if not (event.content and event.content.parts):
+            continue
+        for part in event.content.parts:
+            if part.function_call:
+                used_library = True
+                question = (part.function_call.args or {}).get("question", "")
+                steps.append(Step(icon="🔎", title="Opened the school library", detail=f'Looked up: "{question}"'))
+            elif part.function_response:
+                data = part.function_response.response or {}
+                results = data.get("results") or []
+                if data.get("found") and results:
+                    titles = ", ".join(r.get("title", "") for r in results if r.get("title"))
+                    steps.append(Step(icon="📚", title=f"Found {len(results)} matching page{'s' if len(results) != 1 else ''}", detail=titles))
+                else:
+                    steps.append(
+                        Step(
+                            icon="🤷",
+                            title="Nothing on the school website about that",
+                            detail="So I say 'I couldn't find it' instead of making something up.",
+                        )
+                    )
+    if used_library:
+        steps.append(Step(icon="🧠", title="Gemini wrote the answer from those pages", detail=f"Model: {MODEL}"))
+    else:
+        steps.append(
+            Step(
+                icon="🧠",
+                title="Gemini answered from general knowledge",
+                detail="Not a school fact, so the library was not needed.",
+            )
+        )
+    return steps
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -105,10 +157,12 @@ async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or uuid.uuid4().hex
     message = types.Content(role="user", parts=[types.Part.from_text(text=req.message.strip())])
     chunks: list[str] = []
+    events: list = []
     try:
         async for event in get_runner().run_async(
             user_id="career-day-demo", session_id=session_id, new_message=message
         ):
+            events.append(event)
             if event.is_final_response() and event.content and event.content.parts:
                 chunks.extend(p.text for p in event.content.parts if p.text)
     except Exception as exc:  # noqa: BLE001 - any failure becomes a friendly message
@@ -118,7 +172,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             detail="The AI could not answer right now. Check the API key or internet connection and try again.",
         ) from exc
     reply = "\n".join(chunks).strip() or "Hmm, I didn't get an answer that time. Please try again."
-    return ChatResponse(reply=reply, session_id=session_id)
+    return ChatResponse(reply=reply, session_id=session_id, steps=describe_steps(events))
 
 
 # --------------------------------------------------------------------------

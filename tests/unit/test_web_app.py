@@ -112,7 +112,7 @@ def test_read_aloud_endpoint_fails_softly_when_cloud_call_breaks(client, monkeyp
 
 def test_read_aloud_endpoint_returns_audio_when_cloud_works(client, monkeypatch):
     monkeypatch.setattr(web, "CLOUD_TTS_ENABLED", True)
-    monkeypatch.setattr(web, "synthesize_speech", lambda text: b"ID3fake-mp3")
+    monkeypatch.setattr(web, "synthesize_speech", lambda text, lang="en-US": b"ID3fake-mp3")
     r = client.post("/api/tts", json={"text": "Go Badgers"})
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("audio/mpeg")
@@ -122,3 +122,20 @@ def test_read_aloud_endpoint_returns_audio_when_cloud_works(client, monkeypatch)
 def test_adk_developer_ui_is_still_available(client):
     r = client.get("/dev-ui/", follow_redirects=False)
     assert r.status_code == 200
+
+
+def test_read_aloud_uses_a_latin_american_spanish_voice(client, monkeypatch):
+    seen = []
+    monkeypatch.setattr(web, "CLOUD_TTS_ENABLED", True)
+    monkeypatch.setattr(web, "synthesize_speech", lambda text, lang="en-US": seen.append(lang) or b"mp3")
+    assert client.post("/api/tts", json={"text": "La mascota es el tej\u00f3n.", "lang": "es-US"}).status_code == 200
+    assert seen == ["es-US"]
+    assert web.CLOUD_TTS_VOICES["es-US"].startswith("es-US-")   # never es-ES
+    assert client.post("/api/tts", json={"text": "hola", "lang": "es-ES"}).status_code == 422
+
+
+def test_agent_speaks_like_a_kid_in_latin_american_spanish():
+    from app.agent import INSTRUCTION
+    assert "vosotros" in INSTRUCTION and "ustedes" in INSTRUCTION
+    assert "Colombia" in INSTRUCTION
+    assert "never talk down" in INSTRUCTION

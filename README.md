@@ -209,6 +209,12 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
   turns into **⏹ Stop** while audio plays.
 * **Auto voice** (toggle under the model name, top right) reads every new answer
   aloud automatically. It is off by default and remembered on that browser.
+* **The voice is a kid.** The page picks a youthful male voice from the ones the
+  browser has (on Windows Edge: Andrew or Christopher for English, Alonso for
+  Spanish) and lifts the pitch a little. Spanish answers use a Latin American
+  voice (`es-US`, then Colombia or Mexico), never a Spain voice. The agent's
+  rules ask for the same thing in writing: "ustedes" not "vosotros",
+  "computadora" not "ordenador".
 * If the browser has no voices (rare), the button says so and chat continues.
 * **🎤 Ask** fills the text box with what it heard so it can be fixed before
   sending. Use Chrome or Edge; allow the microphone once when asked.

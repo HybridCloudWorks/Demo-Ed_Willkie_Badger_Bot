@@ -161,6 +161,7 @@
       const bubble = addBubble(data.reply, "bot");
       addSteps(bubble, data.steps);
       lastReply = data.reply;
+      prefetchSpeech(lastReply);
       questionCount += 1;
       updateStatus();
       const reaction = reactionFor(data.steps);
@@ -208,6 +209,7 @@
   }
 
   function stopAudio() {
+    playQueue = [];
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
@@ -273,28 +275,67 @@
     window.speechSynthesis.speak(utter);
   }
 
+  // Cloud voice: the reply is split into a short first chunk (one sentence)
+  // and the rest, both requested at once, so speech starts after ~1 s instead
+  // of waiting for the whole answer to be synthesized. Clips are prefetched
+  // the moment an answer arrives, so Read Aloud is instant.
+  const ttsClips = {};            // text -> Promise<Blob>
+  let playQueue = [];             // Audio elements still to play
+
+  function chunksFor(text) {
+    const sentences = text.split(/(?<=[.!?…])\s+/).filter(Boolean);
+    if (sentences.length <= 1) return [text];
+    return [sentences[0], sentences.slice(1).join(" ")];
+  }
+
+  function fetchClip(chunk, lang) {
+    if (!ttsClips[chunk]) {
+      ttsClips[chunk] = fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: chunk, lang: lang }),
+      }).then(function (res) {
+        if (!res.ok) throw new Error("tts " + res.status);
+        return res.blob();
+      });
+      ttsClips[chunk].catch(function () { delete ttsClips[chunk]; });
+    }
+    return ttsClips[chunk];
+  }
+
+  function prefetchSpeech(text) {
+    if (!cloudTts || !text) return;
+    const lang = detectLang(text);
+    chunksFor(text).forEach(function (c) { fetchClip(c, lang); });
+  }
+
+  function playNext() {
+    if (!playQueue.length) { currentAudio = null; markStopped(); return; }
+    const audio = playQueue.shift();
+    currentAudio = audio;
+    audio.onended = playNext;
+    audio.onerror = playNext;
+    audio.play().catch(playNext);
+  }
+
   async function speak(text) {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    playQueue = [];
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (!text) return;
     if (cloudTts) {
       // Try Google Cloud Text-to-Speech first; fall back to the browser voice.
       try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text, lang: detectLang(text) }),
-        });
-        if (res.ok) {
-          const blob = await res.blob();
-          const audio = new Audio(URL.createObjectURL(blob));
-          currentAudio = audio;
-          audio.onended = markStopped;
-          audio.onerror = markStopped;
-          markPlaying();
-          await audio.play();
-          return;
-        }
+        const lang = detectLang(text);
+        const blobs = await Promise.all(chunksFor(text).map(function (c) {
+          return fetchClip(c, lang);
+        }).map(function (p, i, all) {
+          return i === 0 ? p : p.catch(function () { return null; });   // start on chunk 1 even if 2 lags
+        }));
+        playQueue = blobs.filter(Boolean).map(function (b) { return new Audio(URL.createObjectURL(b)); });
+        markPlaying();
+        playNext();
+        return;
       } catch (err) {
         // ignore and fall back
       }
@@ -323,6 +364,34 @@
   if (window.speechSynthesis) window.speechSynthesis.getVoices(); // warm up voice list
 
   // ---------- Microphone (speech-to-text), optional ----------
+  // After the student stops talking, the browser hands us the sentence and we
+  // send it ourselves after a 2-second countdown, so nobody has to press Send.
+  // Clicking the box, typing, or clicking the mic cancels the countdown.
+  const AUTO_SEND_SECONDS = 2;
+  let autoSendTimer = null;
+
+  function cancelAutoSend() {
+    if (autoSendTimer) { clearInterval(autoSendTimer); autoSendTimer = null; }
+    sendBtn.textContent = "➤";
+    sendBtn.title = "Send";
+  }
+
+  function armAutoSend(text) {
+    cancelAutoSend();
+    if (!text || text.trim().length < 3) return;
+    let left = AUTO_SEND_SECONDS;
+    sendBtn.textContent = String(left);
+    sendBtn.title = "Sending in " + left + "…";
+    autoSendTimer = setInterval(function () {
+      left -= 1;
+      if (left > 0) { sendBtn.textContent = String(left); return; }
+      cancelAutoSend();
+      ask(input.value);
+    }, 1000);
+  }
+  input.addEventListener("input", cancelAutoSend);
+  input.addEventListener("pointerdown", cancelAutoSend);
+
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (Recognition) {
     micBtn.hidden = false;
@@ -334,6 +403,7 @@
       }
       try {
         stopAudio();
+        cancelAutoSend();
         recognizer = new Recognition();
         recognizer.lang = "en-US";
         recognizer.interimResults = false;
@@ -341,7 +411,7 @@
         recognizer.onresult = function (event) {
           const text = event.results[0][0].transcript;
           input.value = text;           // show it so it can be fixed before sending
-          input.focus();
+          armAutoSend(text);            // ...and send it after a short countdown
         };
         recognizer.onerror = function () {
           input.placeholder = "Microphone didn't work. Please type your question.";

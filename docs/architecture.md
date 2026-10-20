@@ -68,7 +68,7 @@ gcloud services enable run.googleapis.com aiplatform.googleapis.com \
 
 # Builds the Dockerfile with Cloud Build and deploys to Cloud Run.
 agents-cli deploy --region us-central1 \
-    --env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1
+    --env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=global
 ```
 
 `agents-cli deploy` reads `agents-cli-manifest.yaml` (deployment target

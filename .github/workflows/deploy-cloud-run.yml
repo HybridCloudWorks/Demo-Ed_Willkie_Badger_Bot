@@ -4,28 +4,18 @@
 # tab ("Run workflow"). It does the same thing as the README's gcloud command:
 # Cloud Build builds the Dockerfile and Cloud Run serves it.
 #
-# One-time setup (repository Settings -> Secrets and variables -> Actions):
-#   Secret   GCP_SA_KEY        JSON key of a service account that may deploy.
-#                              Roles it needs on the project:
-#                                roles/run.admin
-#                                roles/cloudbuild.builds.editor
-#                                roles/artifactregistry.writer
-#                                roles/storage.admin        (source upload bucket)
-#                                roles/iam.serviceAccountUser
-#   Variable GCP_PROJECT_ID    The Google Cloud project ID (not the number).
-#   Variable GCP_REGION        Optional, defaults to us-central1.
+# Authentication is keyless (Workload Identity Federation): GitHub mints a short
+# lived OIDC token for the job, Google Cloud trusts it for this one repository,
+# and the job acts as the github-deployer service account. No secret is stored
+# in GitHub. One-time setup lives in scripts/setup_github_deployer.sh and the
+# repository variables it needs are:
+#   GCP_PROJECT_ID                  simplysoph-66c78
+#   GCP_REGION                      us-central1 (Cloud Run region)
+#   GCP_WORKLOAD_IDENTITY_PROVIDER  projects/<number>/locations/global/workloadIdentityPools/github/providers/github
+#   GCP_DEPLOYER_SA                 github-deployer@<project>.iam.gserviceaccount.com
 #
-# Create the service account and key with:
-#   gcloud iam service-accounts create github-deployer --display-name "GitHub deployer"
-#   for r in run.admin cloudbuild.builds.editor artifactregistry.writer storage.admin iam.serviceAccountUser; do
-#     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-#       --member "serviceAccount:github-deployer@$PROJECT_ID.iam.gserviceaccount.com" --role "roles/$r"
-#   done
-#   gcloud iam service-accounts keys create key.json \
-#     --iam-account "github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
-# then paste key.json into the GCP_SA_KEY secret and delete the local file.
-# (Workload Identity Federation is the keyless alternative; swap the auth step
-# for workload_identity_provider + service_account if you set that up.)
+# GOOGLE_CLOUD_LOCATION stays "global": that is the Gemini endpoint the running
+# service already uses. It is not the Cloud Run region.
 
 name: Deploy to Cloud Run
 
@@ -48,6 +38,7 @@ concurrency:
 env:
   SERVICE: willkie-badger-ai
   REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  GEMINI_LOCATION: global
 
 jobs:
   deploy:
@@ -55,20 +46,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write   # lets the job request the OIDC token Google Cloud trusts
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Fail early if the deploy secret is missing
-        if: ${{ !secrets.GCP_SA_KEY || !vars.GCP_PROJECT_ID }}
+      - name: Fail early if the repository variables are missing
+        if: ${{ !vars.GCP_PROJECT_ID || !vars.GCP_WORKLOAD_IDENTITY_PROVIDER || !vars.GCP_DEPLOYER_SA }}
         run: |
-          echo "::error::Set the GCP_SA_KEY secret and the GCP_PROJECT_ID variable (see the comment at the top of this workflow)."
+          echo "::error::Set the GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOYER_SA repository variables (see scripts/setup_github_deployer.sh)."
           exit 1
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud (keyless)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -78,15 +71,16 @@ jobs:
       - name: Deploy
         run: |
           gcloud run deploy "$SERVICE" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
             --quiet \
-            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$REGION"
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$GEMINI_LOCATION"
 
       - name: Smoke test
         run: |
-          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
+          URL=$(gcloud run services describe "$SERVICE" --project "${{ vars.GCP_PROJECT_ID }}" --region "$REGION" --format 'value(status.url)')
           echo "Service URL: $URL"
           curl --fail --silent --show-error "$URL/api/health"
           echo

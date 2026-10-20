@@ -207,7 +207,9 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
 * No accounts, no student names, no chat history saved, no audio stored.
 * `app/school_knowledge.json` contains only public, institutional information
   from ewms.emsisd.com (no student information, no staff emails).
-* The logo in the header is a **placeholder** (🦡). Replace it with an
+* The animated badger in the header is an **original cartoon mascot** made with
+  Google's Veo video model (`scripts/generate_mascot_video.py`). It is not the
+  school's logo; no official school/district trademark is included. Swap in an
   authorized asset only if the school approves; see the comment in
   `frontend/index.html`.
 
@@ -241,10 +243,11 @@ app/agent.py                  the agent  <- SHOW THIS FILE
 app/school_knowledge.py       search over the cached school pages
 app/school_knowledge.json     the cached public pages
 app/fast_api_app.py           web server (/, /api/chat, /api/tts, /dev-ui)
-frontend/                     chat page: index.html, style.css, app.js
+frontend/                     chat page: index.html, style.css, app.js, badger.mp4 (mascot)
 tests/                        unit tests (no key) + eval dataset
 scripts/career_day_check.py   live check of the Career Day questions
 scripts/refresh_school_knowledge.py   optional refresh of the cached pages
+scripts/generate_mascot_video.py      regenerate the animated badger with Veo
 scripts/set_deck_chat_url.py  put the real chat URL + QR codes into the slide deck
 docs/                         slide deck, diagrams and presenter notes
 Dockerfile, agents-cli-manifest.yaml  Cloud Run deployment

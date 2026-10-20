@@ -364,10 +364,11 @@
   if (window.speechSynthesis) window.speechSynthesis.getVoices(); // warm up voice list
 
   // ---------- Microphone (speech-to-text), optional ----------
-  // After the student stops talking, the browser hands us the sentence and we
-  // send it ourselves after a 2-second countdown, so nobody has to press Send.
+  // After the student stops talking (the browser waits for about a second of
+  // silence), we send the sentence ourselves after a 1-second countdown, so
+  // nobody has to press Send: roughly two seconds from the end of the question.
   // Clicking the box, typing, or clicking the mic cancels the countdown.
-  const AUTO_SEND_SECONDS = 2;
+  const AUTO_SEND_SECONDS = 1;
   let autoSendTimer = null;
 
   function cancelAutoSend() {

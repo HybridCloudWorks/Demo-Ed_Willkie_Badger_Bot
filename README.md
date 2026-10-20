@@ -150,7 +150,7 @@ and the Google Cloud deployment diagram. In short:
 | **Service account + IAM** (`roles/aiplatform.user`) | The app's ID badge. No API key stored anywhere. |
 | **Artifact Registry / Cloud Build** | Where the container image is built and kept. |
 | **Cloud Logging / Trace** | Shows a real student question flowing through the system. |
-| **Cloud Text-to-Speech API** (optional) | The voice behind Read Aloud. |
+| **Cloud Text-to-Speech API** | The voice behind Read Aloud: "Puck", youthful male, English and Latin American Spanish. |
 | **Secret Manager** (only if deploying with an API key) | Keeps the key out of code. |
 
 Nothing else is used on purpose. Details, console paths, and the deploy
@@ -209,12 +209,15 @@ with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
   turns into **⏹ Stop** while audio plays.
 * **Auto voice** (toggle under the model name, top right) reads every new answer
   aloud automatically. It is off by default and remembered on that browser.
-* **The voice is a kid.** The page picks a youthful male voice from the ones the
-  browser has (on Windows Edge: Andrew or Christopher for English, Alonso for
-  Spanish) and lifts the pitch a little. Spanish answers use a Latin American
-  voice (`es-US`, then Colombia or Mexico), never a Spain voice. The agent's
-  rules ask for the same thing in writing: "ustedes" not "vosotros",
-  "computadora" not "ordenador".
+* **The voice is a kid, and it is the same on every laptop.** The Cloud Run
+  deployment has `ENABLE_CLOUD_TTS=true`, so answers are spoken by Google Cloud
+  Text-to-Speech with "Puck", a youthful male voice: `en-US-Chirp3-HD-Puck` for
+  English and `es-US-Chirp3-HD-Puck` for Latin American Spanish (never a Spain
+  voice). The agent's rules ask for the same thing in writing: "ustedes" not
+  "vosotros", "computadora" not "ordenador". Running locally without the cloud
+  voice, the page picks the closest browser voice by locale (`es-US`, then
+  Colombia or Mexico) and lifts the pitch a little; which voice plays then
+  depends on the laptop.
 * If the browser has no voices (rare), the button says so and chat continues.
 * **🎤 Ask** fills the text box with what it heard so it can be fixed before
   sending. Use Chrome or Edge; allow the microphone once when asked.

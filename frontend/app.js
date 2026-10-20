@@ -216,6 +216,42 @@
     markStopped();
   }
 
+  // ---------- which voice ----------
+  // The badger is a kid, so prefer a youthful male voice and lift the pitch a
+  // little. Spanish is Latin American (US / Colombia / Mexico), never Spain.
+  // Browser voice lists differ by OS, so each entry is a preference order:
+  // exact locale first, then a name hint for the voices we know sound right.
+  const VOICE_PREFS = {
+    "es-US": {
+      locales: ["es-US", "es-CO", "es-MX", "es-419", "es-AR", "es-CL", "es-PE"],
+      names: /Alonso|Gonzalo|Jorge|Andr[e\u00e9]s|Mateo|Dalia|Google espa\u00f1ol de Estados Unidos|Paulina|Online|Natural|Google/i,
+      avoid: /es-ES|Spain|Espa\u00f1a|Castellano/i,
+    },
+    "en-US": {
+      locales: ["en-US"],
+      names: /Andrew|Christopher|Brian|Roger|Guy|Eric|Google US English|Online|Natural|Google/i,
+      avoid: /en-GB|en-AU|en-IN|United Kingdom|Australia/i,
+    },
+  };
+
+  function detectLang(text) {
+    return /[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00bf\u00a1]/i.test(text) ? "es-US" : "en-US";
+  }
+
+  function pickVoice(lang) {
+    const prefs = VOICE_PREFS[lang];
+    const voices = window.speechSynthesis.getVoices().filter(function (v) {
+      return !prefs.avoid.test(v.lang + " " + v.name);
+    });
+    for (let i = 0; i < prefs.locales.length; i++) {
+      const same = voices.filter(function (v) { return v.lang.replace("_", "-").toLowerCase() === prefs.locales[i].toLowerCase(); });
+      const hit = same.find(function (v) { return prefs.names.test(v.name); }) || same[0];
+      if (hit) return hit;
+    }
+    const anyLang = voices.filter(function (v) { return v.lang.slice(0, 2).toLowerCase() === lang.slice(0, 2); });
+    return anyLang.find(function (v) { return prefs.names.test(v.name); }) || anyLang[0] || null;
+  }
+
   function speakWithBrowser(text) {
     if (!("speechSynthesis" in window)) {
       readBtn.title = "Voice not available";
@@ -225,13 +261,11 @@
       return;
     }
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = /[áéíóúñ¿¡]/i.test(text) ? "es-US" : "en-US";
-    utter.rate = 0.95;
-    const voices = window.speechSynthesis.getVoices();
-    const wantLang = new RegExp("^" + utter.lang.slice(0, 2), "i");
-    const preferred = voices.find(function (v) { return wantLang.test(v.lang) && /Google|Natural|Online/i.test(v.name); })
-      || voices.find(function (v) { return wantLang.test(v.lang); });
-    if (preferred) utter.voice = preferred;
+    utter.lang = detectLang(text);
+    utter.rate = 1.05;    // a kid talks a touch faster than a newsreader
+    utter.pitch = 1.25;   // and higher; 1.0 is the voice's natural pitch
+    const voice = pickVoice(utter.lang);
+    if (voice) utter.voice = voice;
     utter.onend = markStopped;
     utter.onerror = markStopped;
     window.speechSynthesis.cancel();
@@ -249,7 +283,7 @@
         const res = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text }),
+          body: JSON.stringify({ text: text, lang: detectLang(text) }),
         });
         if (res.ok) {
           const blob = await res.blob();

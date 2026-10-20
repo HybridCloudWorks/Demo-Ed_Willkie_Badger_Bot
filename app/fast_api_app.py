@@ -19,6 +19,7 @@ import os
 import uuid
 from collections import OrderedDict
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -41,7 +42,14 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 
 CLOUD_TTS_ENABLED = os.getenv("ENABLE_CLOUD_TTS", "false").lower() == "true"
-CLOUD_TTS_VOICE = os.getenv("CLOUD_TTS_VOICE", "en-US-Neural2-F")
+# Cloud voices: one per language. The badger is a kid, so the defaults are
+# youthful male voices lifted a few semitones. es-US is Latin American Spanish.
+CLOUD_TTS_VOICES = {
+    "en-US": os.getenv("CLOUD_TTS_VOICE", "en-US-Neural2-D"),
+    "es-US": os.getenv("CLOUD_TTS_VOICE_ES", "es-US-Neural2-B"),
+}
+CLOUD_TTS_PITCH = float(os.getenv("CLOUD_TTS_PITCH", "3.0"))        # semitones, -20..20
+CLOUD_TTS_RATE = float(os.getenv("CLOUD_TTS_RATE", "1.05"))
 MAX_QUESTION_CHARS = 500
 MAX_TTS_CHARS = 1500
 
@@ -202,23 +210,25 @@ async def chat(req: ChatRequest) -> ChatResponse:
 # --------------------------------------------------------------------------
 class TtsRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_TTS_CHARS)
+    lang: Literal["en-US", "es-US"] = "en-US"
 
 
 _tts_cache: OrderedDict[str, bytes] = OrderedDict()
 
 
-def synthesize_speech(text: str) -> bytes:
+def synthesize_speech(text: str, lang: str = "en-US") -> bytes:
     """Call Google Cloud Text-to-Speech and return MP3 bytes."""
     from google.cloud import texttospeech  # imported lazily: optional dependency
 
+    voice_name = CLOUD_TTS_VOICES.get(lang, CLOUD_TTS_VOICES["en-US"])
     client = texttospeech.TextToSpeechClient()
     response = client.synthesize_speech(
         input=texttospeech.SynthesisInput(text=text),
-        voice=texttospeech.VoiceSelectionParams(
-            language_code=CLOUD_TTS_VOICE[:5], name=CLOUD_TTS_VOICE
-        ),
+        voice=texttospeech.VoiceSelectionParams(language_code=voice_name[:5], name=voice_name),
         audio_config=texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=0.95
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=CLOUD_TTS_RATE,
+            pitch=CLOUD_TTS_PITCH,
         ),
     )
     return response.audio_content
@@ -229,15 +239,16 @@ async def tts(req: TtsRequest) -> Response:
     if not CLOUD_TTS_ENABLED:
         raise HTTPException(status_code=503, detail="Cloud Text-to-Speech is not enabled.")
     text = req.text.strip()
-    if text not in _tts_cache:
+    key = f"{req.lang}:{text}"
+    if key not in _tts_cache:
         try:
-            _tts_cache[text] = synthesize_speech(text)
+            _tts_cache[key] = synthesize_speech(text, req.lang)
         except Exception as exc:  # noqa: BLE001
             log.exception("cloud tts failed")
             raise HTTPException(status_code=503, detail="Cloud Text-to-Speech failed.") from exc
         if len(_tts_cache) > 50:
             _tts_cache.popitem(last=False)
-    return Response(content=_tts_cache[text], media_type="audio/mpeg")
+    return Response(content=_tts_cache[key], media_type="audio/mpeg")
 
 
 @app.get("/api/health")

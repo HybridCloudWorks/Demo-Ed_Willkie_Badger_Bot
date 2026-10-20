@@ -154,7 +154,14 @@ diagram: `docs/architecture.md`.
 
 ### Deploy to Cloud Run (optional)
 
-**Simplest path (works on Windows, macOS, Linux; no Agents CLI needed).**
+**From GitHub (keyless, after a one-time setup).** `.github/workflows/deploy-cloud-run.yml`
+deploys on every push to `main` that changes the app, or by hand from the
+*Actions* tab. It signs in with Workload Identity Federation, so no key is stored
+in GitHub. Run `bash scripts/setup_github_deployer.sh` once (as a project Owner)
+to create the deployer service account, the identity pool, and the four repository
+variables it reads. The service keeps `GOOGLE_CLOUD_LOCATION=global`.
+
+**Simplest path by hand (works on Windows, macOS, Linux; no Agents CLI needed).**
 `gcloud run deploy --source` builds the `Dockerfile` with Cloud Build and deploys it:
 
 ```bash
@@ -162,7 +169,7 @@ gcloud auth login
 gcloud config set project YOUR_PROJECT_ID
 gcloud services enable run.googleapis.com aiplatform.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
 gcloud run deploy willkie-badger-ai --source . --region us-central1 --allow-unauthenticated \
-  --set-env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1
+  --set-env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=global
 ```
 
 Then let the service call Gemini (Cloud Run uses the Compute Engine default service account unless you choose another):
@@ -185,7 +192,7 @@ pip install google-agents-cli
 gcloud auth login && gcloud config set project YOUR_PROJECT_ID
 gcloud services enable run.googleapis.com aiplatform.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
 agents-cli deploy --region us-central1 \
-  --env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=us-central1
+  --env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,GOOGLE_CLOUD_LOCATION=global
 ```
 
 `agents-cli deploy` reads `agents-cli-manifest.yaml` and runs `gcloud run deploy`
@@ -249,6 +256,7 @@ scripts/career_day_check.py   live check of the Career Day questions
 scripts/refresh_school_knowledge.py   optional refresh of the cached pages
 scripts/generate_mascot_video.py      regenerate the animated badger with Veo
 scripts/set_deck_chat_url.py  put the real chat URL + QR codes into the slide deck
+scripts/setup_github_deployer.sh   one-time keyless deploy setup for GitHub Actions
 docs/                         slide deck, diagrams and presenter notes
 Dockerfile, agents-cli-manifest.yaml  Cloud Run deployment
 .env.example                  configuration template (never commit .env)

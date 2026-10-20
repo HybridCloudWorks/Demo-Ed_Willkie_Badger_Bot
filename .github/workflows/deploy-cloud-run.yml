@@ -1,0 +1,87 @@
+# Deploys Willkie Badger AI to Cloud Run.
+#
+# Runs on every push to main that touches the app, or by hand from the Actions
+# tab ("Run workflow"). It does the same thing as the README's gcloud command:
+# Cloud Build builds the Dockerfile and Cloud Run serves it.
+#
+# Authentication is keyless (Workload Identity Federation): GitHub mints a short
+# lived OIDC token for the job, Google Cloud trusts it for this one repository,
+# and the job acts as the github-deployer service account. No secret is stored
+# in GitHub. One-time setup lives in scripts/setup_github_deployer.sh and the
+# repository variables it needs are:
+#   GCP_PROJECT_ID                  simplysoph-66c78
+#   GCP_REGION                      us-central1 (Cloud Run region)
+#   GCP_WORKLOAD_IDENTITY_PROVIDER  projects/<number>/locations/global/workloadIdentityPools/github/providers/github
+#   GCP_DEPLOYER_SA                 github-deployer@<project>.iam.gserviceaccount.com
+#
+# GOOGLE_CLOUD_LOCATION stays "global": that is the Gemini endpoint the running
+# service already uses. It is not the Cloud Run region.
+
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "frontend/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - ".gcloudignore"
+      - ".github/workflows/deploy-cloud-run.yml"
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
+env:
+  SERVICE: willkie-badger-ai
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  GEMINI_LOCATION: global
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # lets the job request the OIDC token Google Cloud trusts
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fail early if the repository variables are missing
+        if: ${{ !vars.GCP_PROJECT_ID || !vars.GCP_WORKLOAD_IDENTITY_PROVIDER || !vars.GCP_DEPLOYER_SA }}
+        run: |
+          echo "::error::Set the GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOYER_SA repository variables (see scripts/setup_github_deployer.sh)."
+          exit 1
+
+      - name: Authenticate to Google Cloud (keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --source . \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$GEMINI_LOCATION"
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --project "${{ vars.GCP_PROJECT_ID }}" --region "$REGION" --format 'value(status.url)')
+          echo "Service URL: $URL"
+          curl --fail --silent --show-error "$URL/api/health"
+          echo
+          curl --fail --silent --show-error "$URL/" | grep -q 'Badger Test' && echo "Chat page carries the new demo features."

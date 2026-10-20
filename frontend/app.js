@@ -16,11 +16,22 @@
   const autoVoiceState = document.getElementById("auto-voice-state");
   const statusEl = document.getElementById("status");
 
+  const welcome = document.getElementById("welcome");
+
   let sessionId = null;          // kept in memory only; nothing is stored
   let cloudTts = false;          // set from /api/health
   let currentAudio = null;       // playing <audio> element (Cloud TTS)
   let lastReply = chat.querySelector(".bubble.bot .text").textContent; // greeting
+  let questionCount = 0;
   const AUTO_VOICE_KEY = "badger-auto-voice";   // presenter preference only
+
+  // What the "thinking" bubble says while we wait. Mirrors the real steps
+  // the agent takes, so students connect the wait with the plan.
+  const THINKING_STEPS = [
+    "💬 Reading your question…",
+    "📚 Opening the school library…",
+    "🧠 Asking Gemini to write the answer…",
+  ];
 
   // ---------- helpers ----------
   function addBubble(text, who, extraClass) {
@@ -35,6 +46,40 @@
     return bubble;
   }
 
+  // "How I answered": a small fold-out under each answer listing the steps
+  // the agent really took (library lookup, pages found, Gemini). This is the
+  // Cloud Architect "behind the scenes" moment.
+  function addSteps(bubble, steps) {
+    if (!steps || !steps.length) return;
+    const details = document.createElement("details");
+    details.className = "how";
+    const summary = document.createElement("summary");
+    summary.textContent = "🔍 How I answered (" + steps.length + " steps)";
+    details.appendChild(summary);
+    const list = document.createElement("ol");
+    steps.forEach(function (s) {
+      const li = document.createElement("li");
+      const icon = document.createElement("span");
+      icon.className = "how-icon";
+      icon.textContent = s.icon || "•";
+      const title = document.createElement("strong");
+      title.textContent = s.title || "";
+      li.appendChild(icon);
+      li.appendChild(title);
+      if (s.detail) {
+        const detail = document.createElement("span");
+        detail.className = "how-detail";
+        detail.textContent = s.detail;
+        li.appendChild(detail);
+      }
+      list.appendChild(li);
+    });
+    details.appendChild(list);
+    details.addEventListener("toggle", function () { chat.scrollTop = chat.scrollHeight; });
+    bubble.appendChild(details);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
   function setBusy(busy) {
     sendBtn.disabled = busy;
     input.disabled = busy;
@@ -46,10 +91,16 @@
     const q = (question || "").trim();
     if (!q) return;
     stopAudio();
+    if (welcome) welcome.classList.add("hidden");   // make room for the conversation
     addBubble(q, "student");
     input.value = "";
     setBusy(true);
-    const typing = addBubble("Badger AI is thinking…", "bot", "typing");
+    const typing = addBubble(THINKING_STEPS[0], "bot", "typing");
+    let stepIndex = 0;
+    const ticker = setInterval(function () {
+      stepIndex = Math.min(stepIndex + 1, THINKING_STEPS.length - 1);
+      typing.querySelector(".text").textContent = THINKING_STEPS[stepIndex];
+    }, 900);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -57,16 +108,21 @@
         body: JSON.stringify({ message: q, session_id: sessionId }),
       });
       const data = await res.json().catch(function () { return {}; });
+      clearInterval(ticker);
       typing.remove();
       if (!res.ok) {
         addBubble(data.detail || "Something went wrong. Please try again.", "bot", "error");
         return;
       }
       sessionId = data.session_id;
-      addBubble(data.reply, "bot");
+      const bubble = addBubble(data.reply, "bot");
+      addSteps(bubble, data.steps);
       lastReply = data.reply;
+      questionCount += 1;
+      updateStatus();
       if (autoVoice.checked) speak(lastReply);   // Auto voice is opt-in
     } catch (err) {
+      clearInterval(ticker);
       typing.remove();
       addBubble("I can't reach the server right now. Is the app still running?", "bot", "error");
     } finally {
@@ -79,8 +135,9 @@
     ask(input.value);
   });
 
+  // Chips: the visible label can differ from the question sent (data-q).
   document.querySelectorAll(".chip").forEach(function (chip) {
-    chip.addEventListener("click", function () { ask(chip.textContent); });
+    chip.addEventListener("click", function () { ask(chip.dataset.q || chip.textContent); });
   });
 
   // ---------- Read Aloud (text-to-speech) ----------
@@ -215,12 +272,19 @@
   }
 
   // ---------- startup ----------
+  let health = null;
+  function updateStatus() {
+    if (!health) return;
+    statusEl.textContent = "Model: " + health.model + " · Voice: " + (cloudTts ? "Google Cloud" : "browser") +
+      " · Library: " + health.knowledge_pages + " pages" +
+      (questionCount ? " · Questions: " + questionCount : "");
+  }
   fetch("/api/health")
     .then(function (r) { return r.json(); })
     .then(function (h) {
+      health = h;
       cloudTts = !!h.cloud_tts;
-      statusEl.textContent = "Model: " + h.model + " · Voice: " + (cloudTts ? "Google Cloud" : "browser") +
-        " · Library: " + h.knowledge_pages + " pages";
+      updateStatus();
     })
     .catch(function () { statusEl.textContent = "Server not reachable"; });
 

@@ -35,6 +35,21 @@
     <div class="bubble bot">
       <div class="text">Hi! I'm Willkie Badger AI. Ask me about Ed Willkie Middle School, or about jobs in technology like being a Cloud Architect. Pick a question below or type your own.</div>
     </div>
+
+    <!-- Shown until the first question is asked. Explains the "plan" in four steps. -->
+    <section class="welcome" id="welcome" aria-label="How Willkie Badger AI works">
+      <h2>How I work (the plan a Cloud Architect drew)</h2>
+      <ol class="steps">
+        <li class="step"><span class="step-icon">💬</span><strong>1. You ask</strong><span>Type it or use the mic.</span></li>
+        <li class="step-arrow" aria-hidden="true">➜</li>
+        <li class="step"><span class="step-icon">📚</span><strong>2. I open the library</strong><span>A saved copy of the school website. No guessing.</span></li>
+        <li class="step-arrow" aria-hidden="true">➜</li>
+        <li class="step"><span class="step-icon">🧠</span><strong>3. Gemini thinks</strong><span>Google's AI model writes the answer.</span></li>
+        <li class="step-arrow" aria-hidden="true">➜</li>
+        <li class="step"><span class="step-icon">🔊</span><strong>4. You get the answer</strong><span>Read it, or hear it out loud.</span></li>
+      </ol>
+      <p class="welcome-hint">After every answer, open <strong>“How I answered”</strong> to see each step the AI really took.</p>
+    </section>
   </main>
 
   <section class="suggestions" id="suggestions" aria-label="Suggested questions">
@@ -44,6 +59,8 @@
     <button type="button" class="chip">What does a Cloud Architect do?</button>
     <button type="button" class="chip">What is AI?</button>
     <button type="button" class="chip">How does this chatbot work?</button>
+    <button type="button" class="chip chip-fun" data-q="¿Cuál es la mascota de la escuela?">🌎 ¿Cuál es la mascota de la escuela?</button>
+    <button type="button" class="chip chip-test" data-q="Tell me about the famous Badger Bridge at Ed Willkie Middle School, built in 1901." title="There is no Badger Bridge. Will the AI admit it?">🌉 The Badger Test: the bridge built in 1901</button>
   </section>
 
   <form class="composer" id="composer" autocomplete="off">

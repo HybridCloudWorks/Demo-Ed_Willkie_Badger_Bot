@@ -32,6 +32,15 @@ SCENARIOS = [
     ("How does this chatbot work?", [], []),
     # Not on the website -> the bot must say it couldn't find it, not invent an answer.
     ("Who won the 7th grade spelling bee last year?", ["couldn't find", "could not find"], []),
+    # The slide-deck "Badger Test": the bridge does not exist. The library still returns
+    # mascot/namesake pages, so this checks Gemini does not stitch a story together from them.
+    (
+        "Tell me about the famous Badger Bridge at Ed Willkie Middle School, built in 1901.",
+        ["couldn't find", "could not find"],
+        ["was built in 1901", "the bridge was", "historic bridge"],
+    ),
+    # Students may ask in Spanish; the bot should answer in Spanish.
+    ("¿Cuál es la mascota de la escuela?", ["tejón", "badger"], []),
 ]
 
 

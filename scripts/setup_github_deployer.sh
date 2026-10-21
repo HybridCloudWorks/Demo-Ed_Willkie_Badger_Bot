@@ -11,6 +11,7 @@
 #   - workload identity pool "github" + OIDC provider "github" limited to this repo
 #   - permission for this repo's GitHub Actions jobs to act as github-deployer
 # What it sets on GitHub: the four repository variables the workflow reads.
+# The reverse of this script is scripts/teardown_cloud.sh.
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-simplysoph-66c78}"
@@ -48,17 +49,25 @@ done
 gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --project "$PROJECT_ID" --quiet --condition=None \
   --member "serviceAccount:$SA_EMAIL" --role roles/iam.serviceAccountUser >/dev/null
 
-# 3. Identity pool + OIDC provider trusting only this repository.
-gcloud iam workload-identity-pools describe "$POOL" --project "$PROJECT_ID" --location global >/dev/null 2>&1 ||
-  gcloud iam workload-identity-pools create "$POOL" --project "$PROJECT_ID" --location global \
-    --display-name "GitHub (HybridCloudWorks)"
-gcloud iam workload-identity-pools providers describe "$PROVIDER" --project "$PROJECT_ID" \
-    --location global --workload-identity-pool "$POOL" >/dev/null 2>&1 ||
+# 3. Identity pool + OIDC provider trusting only this repository. A pool or
+#    provider removed by scripts/teardown_cloud.sh stays soft-deleted for 30
+#    days; within that window it must be undeleted, not recreated.
+pool_state=$(gcloud iam workload-identity-pools describe "$POOL" --project "$PROJECT_ID" --location global --format 'value(state)' 2>/dev/null || true)
+case "$pool_state" in
+  ACTIVE)  ;;
+  DELETED) gcloud iam workload-identity-pools undelete "$POOL" --project "$PROJECT_ID" --location global --quiet ;;
+  *)       gcloud iam workload-identity-pools create "$POOL" --project "$PROJECT_ID" --location global --display-name "GitHub (HybridCloudWorks)" ;;
+esac
+provider_state=$(gcloud iam workload-identity-pools providers describe "$PROVIDER" --project "$PROJECT_ID" --location global --workload-identity-pool "$POOL" --format 'value(state)' 2>/dev/null || true)
+if [[ "$provider_state" == "DELETED" ]]; then
+  gcloud iam workload-identity-pools providers undelete "$PROVIDER" --project "$PROJECT_ID" --location global --workload-identity-pool "$POOL" --quiet
+elif [[ "$provider_state" != "ACTIVE" ]]; then
   gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" --project "$PROJECT_ID" \
     --location global --workload-identity-pool "$POOL" --display-name "GitHub Actions OIDC" \
     --issuer-uri "https://token.actions.githubusercontent.com" \
     --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref" \
     --attribute-condition "assertion.repository_id == '$REPO_ID' && assertion.repository_owner_id == '$OWNER_ID'"
+fi
 
 # 4. Let this repo's jobs impersonate the deployer.
 gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" --project "$PROJECT_ID" --quiet --condition=None \
@@ -72,4 +81,4 @@ gh variable set GCP_REGION -R "$REPO" -b "$REGION"
 gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER -R "$REPO" -b "$PROVIDER_NAME"
 gh variable set GCP_DEPLOYER_SA -R "$REPO" -b "$SA_EMAIL"
 
-echo "Done. Merge the workflow, then push to main or click Run workflow in the Actions tab."
+echo "Done. IAM takes about a minute to propagate; then push to main or run: gh workflow run deploy-cloud-run.yml"

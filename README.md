@@ -209,6 +209,34 @@ agents-cli deploy --region us-central1 \
 with the `Dockerfile`. The local demo is the primary plan; Cloud Run is the
 "look where it can live" moment.
 
+### Tear down, and bring it back later
+
+When the demo is over, remove everything it created in Google Cloud and GitHub
+while keeping this repository ready to redeploy:
+
+```bash
+bash scripts/teardown_cloud.sh            # plan: lists what exists, changes nothing
+bash scripts/teardown_cloud.sh --apply    # deletes, then validates
+```
+
+It removes only the Cloud Run service, its container images and source uploads,
+the `github-deployer` service account and its bindings, the `github` identity
+pool, and the four `GCP_*` repository variables. It then checks that each of
+those is gone **and** that everything else in the project (other services,
+service accounts, pools, buckets, APIs, roles) is byte-for-byte unchanged.
+
+To bring it back:
+
+```bash
+bash scripts/setup_github_deployer.sh     # identity + variables (undeletes the pool if needed)
+gh workflow run deploy-cloud-run.yml      # or push any app change to main
+```
+
+The service comes back at the same address, because Cloud Run derives it from
+the service name, project number and region, so the QR codes in the deck keep
+working. Allow about a minute after the setup script for IAM to propagate
+before the first run.
+
 ## Voice features
 
 * **🔊 Read Aloud** sits next to the text box and reads the latest answer. It
@@ -281,6 +309,7 @@ scripts/refresh_school_knowledge.py   optional refresh of the cached pages
 scripts/generate_mascot_video.py      regenerate the animated badger with Veo
 scripts/set_deck_chat_url.py  put the real chat URL + QR codes into the slide deck
 scripts/setup_github_deployer.sh   one-time keyless deploy setup for GitHub Actions
+scripts/teardown_cloud.sh          remove everything above from the cloud, with validation
 docs/                         slide deck, diagrams and presenter notes
 Dockerfile, agents-cli-manifest.yaml  Cloud Run deployment
 .env.example                  configuration template (never commit .env)

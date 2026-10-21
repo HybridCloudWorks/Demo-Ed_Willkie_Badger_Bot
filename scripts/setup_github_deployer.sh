@@ -36,15 +36,16 @@ gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" >/dev/n
   gcloud iam service-accounts create "$SA_NAME" --project "$PROJECT_ID" \
     --display-name "GitHub Actions deployer (Demo-Ed_Willkie_Badger_Bot)"
 
-# 2. Roles a `gcloud run deploy --source` needs: Cloud Run, Cloud Build, the
+# 2. Roles a `gcloud run deploy --source` needs. --condition=None: the project policy
+#    already holds conditional bindings, which gcloud otherwise refuses non-interactively. Cloud Run, Cloud Build, the
 #    Artifact Registry repo it writes to, the source-upload bucket, and the right
 #    to run the service as the runtime service account.
 for role in roles/run.admin roles/cloudbuild.builds.editor roles/artifactregistry.writer \
             roles/storage.admin roles/serviceusage.serviceUsageConsumer; do
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" --quiet \
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --quiet --condition=None \
     --member "serviceAccount:$SA_EMAIL" --role "$role" >/dev/null
 done
-gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --project "$PROJECT_ID" --quiet \
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --project "$PROJECT_ID" --quiet --condition=None \
   --member "serviceAccount:$SA_EMAIL" --role roles/iam.serviceAccountUser >/dev/null
 
 # 3. Identity pool + OIDC provider trusting only this repository.
@@ -60,7 +61,7 @@ gcloud iam workload-identity-pools providers describe "$PROVIDER" --project "$PR
     --attribute-condition "assertion.repository_id == '$REPO_ID' && assertion.repository_owner_id == '$OWNER_ID'"
 
 # 4. Let this repo's jobs impersonate the deployer.
-gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" --project "$PROJECT_ID" --quiet \
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" --project "$PROJECT_ID" --quiet --condition=None \
   --role roles/iam.workloadIdentityUser \
   --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL/attribute.repository_id/$REPO_ID" >/dev/null
 
